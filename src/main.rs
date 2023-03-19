@@ -1,65 +1,40 @@
-use image::imageops::FilterType;
-use image::load;
-use rust_bert::Config;
-use tch::nn::Linear;
-use tensorflow::Tensor;
-use rust_bert::gpt2::{Gpt2Config, GPT2Generator, Gpt2Model};
-use rust_bert::pipelines::common::ModelType;
-use rust_bert::pipelines::generation_utils::{GenerateConfig, LanguageGenerator};
-use std::path::Path;
-use tch::{nn, Device};
+use std::fs::File;
+use std::io::Read;
+use image::{GenericImageView, ImageBuffer, Luma, RgbImage};
+use tensorflow::{Graph, ImportGraphDefOptions, Operation, Session, SessionOptions, Tensor};
+
+///  Preprocess the dataset:
+/// Use the `image` crate to preprocess the images.
+/// Resize all the images to a fixed size and convert them to grayscale.
+fn preprocess_image(image_path: &str, size: (u32, u32)) -> Option<Vec<f32>> {
+    let img = image::open(image_path).ok()?.resize_exact(size.0, size.1, image::imageops::FilterType::Nearest);
+    let img = img.to_luma8();
+    let img = ImageBuffer::from_fn(size.0, size.1, |x, y| Luma([img.get_pixel(x, y)[0]]));
+    Some(img.to_vec().iter().map(|x| *x as f32 / 255.).collect())
+}
+
+
 
 fn main() {
-    use image::{self, GenericImageView};
-    use tch::{Tensor, nn::{Module, Conv2D}};
+    let images = vec!["image1.jpg", "image2.jpg", "image3.jpg"];
+    let graph = {
+        let mut graph = tensorflow::Graph::new();
+        let mut proto = Vec::new();
+        File::open("model/inception_v3_2016_08_28_frozen.pb")?
+            .read_to_end(&mut proto)?;
 
-// Load pre-trained ResNet50 model
-    let mut resnet = tch::CModule::load("resnet50.pt").unwrap();
-    resnet.set_eval();
-
-// Load image and preprocess it
-    let img = image::open("rsc/IMG_20220604_132820.jpg").unwrap();
-    let resized_img = img.resize_exact(224, 224, FilterType::Nearest);
-    let tensor_img = Tensor::of_slice(resized_img.to_bytes().as_slice())
-        .view([1, 3, 224, 224])
-        .to_kind(tch::Kind::Float);
-
-// Calculate features using ResNet50 model
-    let features = resnet.forward_ts(&[&tensor_img]);
-
-// Perform adaptive average pooling
-    let embedding_size = 2048;
-    let pooled_features = features.unwrap().get(0)
-        .adaptive_avg_pool2d(&[1, 1])
-        .view([-1, embedding_size]);
-
-
-    // Load GPT-2 configuration from checkpoint file
-    let config = Gpt2Config::from_file("gpt2_config.json");
-
-    // Declare a generation configuration
-    let generate_config = GenerateConfig {
-        max_length: 20,
-        do_sample: true,
-        top_k: 50,
-        temperature: 0.7,
-        ..Default::default()
+        graph.import_graph_def(&*proto, {&ImportGraphDefOptions})?;
+        graph
     };
+    let session = tensorflow::Session::new(&tensorflow::SessionOptions::new(), &graph)?;
+    let input_operation = graph.operation_by_name_required("input")?;
+    let output_operation = graph.operation_by_name_required("InceptionV3/Predictions/Reshape_1")?;
 
+    let entries = images.iter().map(|i| Node::from(preprocess_image(i, (299, 299)).unwrap())).collect::<Vec<_>>();
+    let input_tensor = Tensor::from(entries.as_slice());
 
-    let config_path = Path::new("path/to/config.json");
-    let device = Device::Cpu;
-    let p = nn::VarStore::new(device);
-    let config = Gpt2Config::from_file(config_path);
-    let model: Gpt2Model = Gpt2Model::new(&p.root() / "gpt2", &config);
+    let results = session.run(&mut [(input_operation, input_tensor), &[output_operation]])?;
+    let embeddings_tensor = results[0].clone();
+    let embeddings = embeddings_tensor.into::<Vec<f32>>();
 
-    // Instantiate GPT2 generator
-    let mut generator = GPT2Generator::new(generate_config);
-
-    // Generate text from embeddings using GPT2 generator
-    let prompt = LanguageGenerator::generate_prompt_from_embeddings(&[&pooled_features], None);
-    let output = generator.generate(Some(vec![&prompt]), generate_config)?;
-    for generated_text in output {
-        println!("Description: {}", generated_text.text);
-    }
 }
