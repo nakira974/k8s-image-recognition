@@ -18,6 +18,7 @@ _LICENSE = ""
 
 _URL = "https://unsplash.com/data/lite/latest"
 
+
 class UnsplashPhoto(datasets.GeneratorBasedBuilder):
     """The Unsplash 25K dataset for photos"""
 
@@ -68,9 +69,9 @@ class UnsplashPhoto(datasets.GeneratorBasedBuilder):
         new_url = dl_manager.download_and_extract(_URL)
         # remove extra files
         for file in os.listdir(new_url):
-            if os.path.isfile(new_url+"/"+file):
+            if os.path.isfile(new_url + "/" + file):
                 if file != 'photos.tsv000':
-                    os.remove(new_url+'/'+file)
+                    os.remove(new_url + '/' + file)
         return [
             datasets.SplitGenerator(
                 name=datasets.Split.TRAIN,
@@ -89,6 +90,6 @@ class UnsplashPhoto(datasets.GeneratorBasedBuilder):
                 else:
                     values = line.strip().split("\t")
                     if len(values) != len(cols):
-                        values.extend(['']*(len(cols)-len(values)))
+                        values.extend([''] * (len(cols) - len(values)))
                     yield id_, {cols[i]: values[i] for i in range(len(cols))}
                     id_ += 1
