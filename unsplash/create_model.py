@@ -1,9 +1,9 @@
 import pandas as pd
 import glob
 
+from unsplash.UnsplashPhoto import UnsplashPhoto
 
-
-path = './datasets/'
+path = './unsplash_datasets/'
 documents = ['photos', 'keywords', 'collections', 'conversions', 'colors']
 datasets = {}
 
@@ -17,3 +17,4 @@ for doc in documents:
 
     datasets[doc] = pd.concat(subsets, axis=0, ignore_index=True)
 
+UnsplashPhoto(datasets)
