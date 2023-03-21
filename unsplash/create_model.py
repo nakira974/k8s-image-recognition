@@ -51,6 +51,7 @@ def create_embeddings(dataset, p_embedding_model):
     batch_size = 32
     result_embeddings = []
 
+
     for i in range(0, len(photo_ids), batch_size):
         # Load a batch of images
         batch_ids = photo_ids[i:i + batch_size]
