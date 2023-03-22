@@ -78,7 +78,6 @@ def create_embeddings(dataset, p_embedding_model):
     color_hex_codes = dataset['colors']['hex']
     batch_size = 32
     result_embeddings = []
-    login(token="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")
 
     # Define the model and tokenizer
     for i in range(0, len(photo_ids), batch_size):
@@ -146,4 +145,13 @@ encoder_input_data, decoder_input_data, decoder_target_data = prepare_data_for_t
 text_generation_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 text_generation_model.fit([decoder_input_data], [decoder_target_data], epochs=10, batch_size=32)
+output = text_generation_model.predict([encoder_input_data])
+
+login(token="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")
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
+print(decoded_output)
+
 text_generation_model.save('wickr-bot.keras')
+
+print(end="END\n")
