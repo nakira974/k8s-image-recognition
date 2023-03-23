@@ -105,19 +105,19 @@ def prepare_data_for_text_generation(embedding_matrix, dataframe):
     photo_ids = dataframe.photo_id
     descriptions = []
     for i in range(len(photo_ids)):
-        description = "<start> " + dataframe.iloc[i]['description'] + " <end>"
+        description = "<start> " + dataframe.iloc[i]['photo_description'] + " <end>"
         descriptions.append(description)
 
     # Tokenize the textual descriptions
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-    sequences = tokenizer(descriptions, padding='max_length', truncation=True, max_length=64, return_tensors='tf')
+    google_bert_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    sequences = google_bert_tokenizer(descriptions, padding='max_length', truncation=True, max_length=64, return_tensors='tf')
 
     # Create input and output sequences for training
-    encoder_input_data = embedding_matrix
-    decoder_input_data = sequences.input_ids
+    encoder_input_matrix = embedding_matrix
+    decoder_input_matrix = sequences.input_ids
     decoder_output_data = sequences.attention_mask
 
-    return encoder_input_data, decoder_input_data, decoder_output_data
+    return encoder_input_matrix, decoder_input_matrix, decoder_output_data
 
 
 path = './unsplash_datasets/'
