@@ -197,6 +197,19 @@ class Soucoupe(PreTrainedModel):
 
         return result
 
+    def prepare_inputs_for_generation(self, input_ids, **kwargs):
+        # Get the photo embeddings from the input_ids
+        photo_embeddings = input_ids[:, :128]
+
+        # Add an additional "batch" dimension to the photo embeddings tensor
+        photo_embeddings = tf.expand_dims(photo_embeddings, axis=0)
+
+        # Set the max length of the decoder input
+        kwargs["max_length"] = 64
+
+        # Return the photo embeddings as input and the rest of the kwargs as is
+        return {"image_embeddings": photo_embeddings}, kwargs
+
 
 def main():
     path = './unsplash_datasets/'
