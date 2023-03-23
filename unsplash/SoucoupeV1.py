@@ -8,7 +8,7 @@ from PIL import Image
 import tensorflow as tf
 from keras.applications.inception_v3 import preprocess_input
 from keras import Model
-from keras.layers import Input, Flatten, Dense, Dropout, LSTM, RepeatVector, TimeDistributed
+from keras.layers import Input, Flatten, Dense, Dropout, LSTM, RepeatVector, TimeDistributed, Embedding
 from huggingface_hub import Repository, login
 from torch import nn
 from transformers import AutoTokenizer, AutoConfig, PreTrainedModel
@@ -64,7 +64,7 @@ class Soucoupe(PreTrainedModel):
         photo_ids = dataframe.photo_id
         descriptions = []
         for i in range(len(photo_ids)):
-            description = "<start> " + dataframe.iloc[i]['photo_description'] + " <end>"
+            description = "<start> " + str(dataframe.iloc[i]['photo_description']) + " <end>"
             descriptions.append(description)
 
         # Tokenize the textual descriptions
@@ -76,10 +76,19 @@ class Soucoupe(PreTrainedModel):
 
         # Create input and output sequences for training
         encoder_input_matrix = embedding_matrix
-        decoder_input_matrix = sequences.input_ids
-        decoder_output_data = sequences.attention_mask
+        decoder_input_data = sequences.input_ids[:, :-1]
+        decoder_output_data = Soucoupe.to_one_hot(sequences.input_ids[:, 1:], num_classes=28)
+        for i in range(5):
+            print('Text description:', descriptions[i])
+            print('Tokenized sequence:', sequences.input_ids[i])
 
-        return encoder_input_matrix, decoder_input_matrix, decoder_output_data
+        # Convert decoder_input_data to a Numpy array to avoid 'tuple' object error
+        decoder_input_data = np.array(decoder_input_data)
+        for i in range(5):
+            print('Tokenized sequence:', sequences.input_ids[i])
+            print('Decoder input data:', decoder_input_data[i])
+
+        return encoder_input_matrix, decoder_input_data, decoder_output_data
 
     @staticmethod
     def create_embeddings(dataset, p_embedding_model):
@@ -145,21 +154,30 @@ class Soucoupe(PreTrainedModel):
         return result_embedding_model
 
     @staticmethod
-    def create_text_generation_model():
+    def create_text_generation_model(vocab_size):
         embedding_dim = 128
         num_decoder_tokens = 28
         latent_dim = 256
 
         # Define the input layer for the decoder
-        input_decoder_layer = Input(shape=(None, num_decoder_tokens))
+        input_decoder_layer = Input(shape=(None,))
 
+        # Add an embedding layer
+        embedded_layer = Embedding(input_dim=vocab_size, output_dim=embedding_dim)
+        embedded_output = embedded_layer(input_decoder_layer)
+        embedded_output = embedded_output[:, :, :]
         # Define the LSTM decoder
         decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True)
-        decoder_outputs, _, _ = decoder_lstm(input_decoder_layer)
+        decoder_outputs, _, _ = decoder_lstm(embedded_output)
 
         # Add a dense layer
         decoder_dense = Dense(num_decoder_tokens, activation='softmax')
         decoder_outputs = decoder_dense(decoder_outputs)
+
+        # Add a TimeDistributed layer to apply the dense layer to each time step
+        # ensure that the output shape of the model matches the expected shape of the target data
+        time_distributed_layer = TimeDistributed(Dense(num_decoder_tokens, activation='softmax'))
+        decoder_outputs = time_distributed_layer(decoder_outputs)
 
         # Define the output layer for the decoder
         output_decoder_layer = decoder_outputs
@@ -169,10 +187,26 @@ class Soucoupe(PreTrainedModel):
 
         return result_text_generation_model
 
+    @staticmethod
+    def to_one_hot(data, num_classes):
+        # Truncate values less than 0 or greater than num_classes-2
+        data = np.clip(data, 0, num_classes - 2)
+
+        # Create an empty one-hot array with shape (batch_size, timesteps, num_classes)
+        batch_size, timesteps = data.shape
+        result = np.zeros((batch_size, timesteps, num_classes))
+
+        # Convert data to one-hot encoding
+        for i in range(batch_size):
+            for j in range(timesteps):
+                result[i, j, data[i, j]] = 1
+
+        return result
+
 
 def main():
     path = './unsplash_datasets/'
-    documents = ['photos', 'keywords', 'collections', 'conversions', 'colors']
+    documents = ['photos', 'colors']
     datasets = {}
 
     for doc in documents:
@@ -189,16 +223,21 @@ def main():
     embedding_model = Soucoupe.create_embedding_model()
     embeddings = Soucoupe.create_embeddings(datasets, embedding_model)
     print(embeddings)
-
-    text_generation_model = Soucoupe.create_text_generation_model()
     encoder_input_data, \
         decoder_input_data, \
         decoder_target_data = Soucoupe.prepare_data_for_text_generation(embeddings,
                                                                         datasets['photos'])
 
-    text_generation_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    text_generation_model = Soucoupe.create_text_generation_model(decoder_input_data.max())
 
-    text_generation_model.fit([decoder_input_data], [decoder_target_data], epochs=10, batch_size=32)
+    text_generation_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    # Train the model using decoder_input_one_hot
+    print('Decoder input data min:', decoder_input_data.min())
+    print('Decoder input data max:', decoder_input_data.max())
+    print('Decoder target data min:', decoder_target_data.min())
+    print('Decoder target data max:', decoder_target_data.max())
+    decoder_input_data = np.clip(decoder_input_data, 0, text_generation_model.layers[1].input_dim - 2)
+    text_generation_model.fit(decoder_input_data, decoder_target_data, epochs=10, batch_size=32)
     output = text_generation_model.predict([encoder_input_data])
 
     login(token="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")

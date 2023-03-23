@@ -142,6 +142,7 @@ print(embeddings)
 text_generation_model = create_text_generation_model()
 encoder_input_data, decoder_input_data, decoder_target_data = prepare_data_for_text_generation(embeddings,
                                                                                                datasets['photos'])
+
 text_generation_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 text_generation_model.fit([decoder_input_data], [decoder_target_data], epochs=10, batch_size=32)
