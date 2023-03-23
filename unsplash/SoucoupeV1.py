@@ -8,7 +8,7 @@ from PIL import Image
 import tensorflow as tf
 from keras.applications.inception_v3 import preprocess_input
 from keras import Model
-from keras.layers import Input, Flatten, Dense, Dropout, LSTM, RepeatVector, TimeDistributed
+from keras.layers import Input, Flatten, Dense, Dropout, LSTM, RepeatVector, TimeDistributed, Embedding
 from huggingface_hub import Repository, login
 from torch import nn
 from transformers import AutoTokenizer, AutoConfig, PreTrainedModel
@@ -64,7 +64,7 @@ class Soucoupe(PreTrainedModel):
         photo_ids = dataframe.photo_id
         descriptions = []
         for i in range(len(photo_ids)):
-            description = "<start> " + dataframe.iloc[i]['photo_description'] + " <end>"
+            description = "<start> " + str(dataframe.iloc[i]['photo_description']) + " <end>"
             descriptions.append(description)
 
         # Tokenize the textual descriptions
@@ -151,11 +151,15 @@ class Soucoupe(PreTrainedModel):
         latent_dim = 256
 
         # Define the input layer for the decoder
-        input_decoder_layer = Input(shape=(None, num_decoder_tokens))
+        input_decoder_layer = Input(shape=(None,))
+
+        # Add an embedding layer
+        embedded_layer = Embedding(input_dim=num_decoder_tokens, output_dim=embedding_dim)
+        embedded_output = embedded_layer(input_decoder_layer)
 
         # Define the LSTM decoder
         decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True)
-        decoder_outputs, _, _ = decoder_lstm(input_decoder_layer)
+        decoder_outputs, _, _ = decoder_lstm(embedded_output)
 
         # Add a dense layer
         decoder_dense = Dense(num_decoder_tokens, activation='softmax')
@@ -172,7 +176,7 @@ class Soucoupe(PreTrainedModel):
 
 def main():
     path = './unsplash_datasets/'
-    documents = ['photos', 'keywords', 'collections', 'conversions', 'colors']
+    documents = ['photos', 'colors']
     datasets = {}
 
     for doc in documents:
@@ -197,7 +201,6 @@ def main():
                                                                         datasets['photos'])
 
     text_generation_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-
     text_generation_model.fit([decoder_input_data], [decoder_target_data], epochs=10, batch_size=32)
     output = text_generation_model.predict([encoder_input_data])
 
