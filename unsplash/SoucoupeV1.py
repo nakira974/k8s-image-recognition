@@ -165,6 +165,11 @@ class Soucoupe(PreTrainedModel):
         decoder_dense = Dense(num_decoder_tokens, activation='softmax')
         decoder_outputs = decoder_dense(decoder_outputs)
 
+        # Add a TimeDistributed layer to apply the dense layer to each time step
+        # ensure that the output shape of the model matches the expected shape of the target data
+        time_distributed_layer = TimeDistributed(Dense(num_decoder_tokens, activation='softmax'))
+        decoder_outputs = time_distributed_layer(decoder_outputs)
+
         # Define the output layer for the decoder
         output_decoder_layer = decoder_outputs
 
@@ -172,6 +177,18 @@ class Soucoupe(PreTrainedModel):
         result_text_generation_model = Model(inputs=[input_decoder_layer], outputs=[output_decoder_layer])
 
         return result_text_generation_model
+
+    @staticmethod
+    def to_one_hot(data, num_classes):
+        # Truncate values less than 0 or greater than num_classes-1
+        data = np.clip(data, 0, num_classes - 1)
+
+        # Convert data to one-hot encoding
+        result = np.zeros((data.shape[0], data.shape[1], num_classes))
+        for i in range(data.shape[0]):
+            for j in range(data.shape[1]):
+                result[i, j, data[i, j]] = 1
+        return result
 
 
 def main():
@@ -200,8 +217,14 @@ def main():
         decoder_target_data = Soucoupe.prepare_data_for_text_generation(embeddings,
                                                                         datasets['photos'])
 
+    print(decoder_input_data.shape)
+    print(decoder_input_data)
     text_generation_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    text_generation_model.fit([decoder_input_data], [decoder_target_data], epochs=10, batch_size=32)
+    # Convert decoder input data to one-hot encoding
+    decoder_input_one_hot = Soucoupe.to_one_hot(decoder_input_data, num_classes=28)
+
+    # Train the model using decoder_input_one_hot
+    text_generation_model.fit([decoder_input_one_hot], [decoder_target_data], epochs=10, batch_size=32)
     output = text_generation_model.predict([encoder_input_data])
 
     login(token="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")
