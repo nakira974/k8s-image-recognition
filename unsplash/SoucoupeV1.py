@@ -78,15 +78,9 @@ class Soucoupe(PreTrainedModel):
         encoder_input_matrix = embedding_matrix
         decoder_input_data = sequences.input_ids[:, :-1]
         decoder_output_data = Soucoupe.to_one_hot(sequences.input_ids[:, 1:], num_classes=28)
-        for i in range(5):
-            print('Text description:', descriptions[i])
-            print('Tokenized sequence:', sequences.input_ids[i])
 
         # Convert decoder_input_data to a Numpy array to avoid 'tuple' object error
         decoder_input_data = np.array(decoder_input_data)
-        for i in range(5):
-            print('Tokenized sequence:', sequences.input_ids[i])
-            print('Decoder input data:', decoder_input_data[i])
 
         return encoder_input_matrix, decoder_input_data, decoder_output_data
 
@@ -238,7 +232,7 @@ def main():
     print('Decoder target data max:', decoder_target_data.max())
     decoder_input_data = np.clip(decoder_input_data, 0, text_generation_model.layers[1].input_dim - 2)
     text_generation_model.fit(decoder_input_data, decoder_target_data, epochs=10, batch_size=32)
-    output = text_generation_model.predict([encoder_input_data])
+    output = text_generation_model.predict(encoder_input_data)
 
     login(token="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")
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
