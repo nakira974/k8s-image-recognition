@@ -268,7 +268,8 @@ def main():
 
     # Create the Hugging Face transformer class
     saved_model = tf.saved_model.load('wickr-bot')
-    transformer_model = Soucoupe(saved_model, tokenizer, AutoConfig.from_pretrained('wickr-bot'))
+    config = AutoConfig.from_pretrained('wickr-bot')
+    transformer_model = Soucoupe(saved_model, tokenizer, config)
 
     # Upload the model to Hugging Face
     login(token="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")
