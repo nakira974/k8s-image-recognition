@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Union, Tuple
 
@@ -11,7 +12,8 @@ from keras import Model
 from keras.layers import Input, Flatten, Dense, Dropout, LSTM, TimeDistributed, Embedding
 from huggingface_hub import login
 from torch import nn
-from transformers import PreTrainedModel, BertTokenizer,AutoConfig
+from torch._inductor.codecache import cache_dir
+from transformers import PreTrainedModel, BertTokenizer, AutoConfig, BertConfig
 
 
 class Soucoupe(PreTrainedModel):
@@ -49,12 +51,16 @@ class Soucoupe(PreTrainedModel):
         return decoded_output
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+    def from_pretrained(cls, pretrained_model_name_or_path, dtype=tf.float32, *model_args, **kwargs):
         if pretrained_model_name_or_path == "local":
             main()
-            saved_model = tf.saved_model.load("wickr-bot.keras")
+            saved_model = tf.saved_model.load("Aloblock/descrivizio")
             tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
             return cls(saved_model, tokenizer)
+
+        config = AutoConfig.from_pretrained(pretrained_model_name_or_path, *model_args, cache_dir=cache_dir,
+                                              **kwargs)
+        config.dtype = dtype
 
     def forward(self, image_embeddings):
         return self.generate_description(image_embeddings)
@@ -68,10 +74,11 @@ class Soucoupe(PreTrainedModel):
             descriptions.append(description)
 
         # Tokenize the textual descriptions
+        max_seq_length = 128
         google_bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         sequences = google_bert_tokenizer(descriptions, padding='max_length',
                                           truncation=True,
-                                          max_length=64,
+                                          max_length=max_seq_length,
                                           return_tensors='tf')
 
         # Create input and output sequences for training
@@ -256,7 +263,7 @@ def main():
     text_generation_model.fit(decoder_input_data, decoder_target_data, epochs=10, batch_size=32)
     encoder_input_data = np.array(embeddings)
     print(encoder_input_data.shape)
-    output = tf.convert_to_tensor(text_generation_model.predict(encoder_input_data))
+    output = text_generation_model.predict(encoder_input_data)
 
     login(token="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")
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
@@ -264,17 +271,17 @@ def main():
     decoded_output = tokenizer.decode(output[0][8], skip_special_tokens=True)
     print(decoded_output)
 
-    tf.keras.models.save_model(text_generation_model, 'wickr-bot')
+    tf.keras.models.save_model(text_generation_model, 'Aloblock/descrivizio')
 
     # Create the Hugging Face transformer class
-    saved_model = tf.saved_model.load('wickr-bot')
-    config = AutoConfig.from_pretrained('wickr-bot')
+    saved_model = tf.saved_model.load('Aloblock/descrivizio')
+    config = AutoConfig.from_pretrained('Aloblock/descrivizio')
     transformer_model = Soucoupe(saved_model, tokenizer, config)
 
     # Upload the model to Hugging Face
-    login(token="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")
-    transformer_model.push_to_hub(repo_id="Aloblock/soucoupe",
-                                  model=transformer_model,
+    transformer_model.push_to_hub(repo_id="Aloblock/descrivizio",
+                                  organization="Aloblock",
+                                  repo_url="https://huggingface.co/Aloblock/descrivizio",
                                   commit_message="First commit",
                                   use_auth_token=True)
 
