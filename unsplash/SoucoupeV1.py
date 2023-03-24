@@ -8,10 +8,10 @@ from PIL import Image
 import tensorflow as tf
 from keras.applications.inception_v3 import preprocess_input
 from keras import Model
-from keras.layers import Input, Flatten, Dense, Dropout, LSTM, RepeatVector, TimeDistributed, Embedding
-from huggingface_hub import Repository, login
+from keras.layers import Input, Flatten, Dense, Dropout, LSTM, TimeDistributed, Embedding
+from huggingface_hub import login
 from torch import nn
-from transformers import AutoTokenizer, AutoConfig, PreTrainedModel
+from transformers import PreTrainedModel, BertTokenizer
 
 
 class Soucoupe(PreTrainedModel):
@@ -53,7 +53,7 @@ class Soucoupe(PreTrainedModel):
         if pretrained_model_name_or_path == "local":
             main()
             saved_model = tf.saved_model.load("wickr-bot.keras")
-            tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+            tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
             return cls(saved_model, tokenizer)
 
     def forward(self, image_embeddings):
@@ -68,7 +68,7 @@ class Soucoupe(PreTrainedModel):
             descriptions.append(description)
 
         # Tokenize the textual descriptions
-        google_bert_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        google_bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         sequences = google_bert_tokenizer(descriptions, padding='max_length',
                                           truncation=True,
                                           max_length=64,
@@ -259,19 +259,15 @@ def main():
     output = tf.convert_to_tensor(text_generation_model.predict(encoder_input_data))
 
     login(token="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")
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
     print(output.shape)
-    output = output[0]
-
-    # Decode the output using the tokenizer
-    decoded_output = tokenizer.decode(output.argmax(axis=1), skip_special_tokens=True)
-    print(decoded_output)
+    decoded_output = tokenizer.decode(output[0][8], skip_special_tokens=True)
     print(decoded_output)
 
     text_generation_model.save('wickr-bot.keras')
 
     # Create the Hugging Face transformer class
-    saved_model = tf.saved_model.load('wickr-bot.keras')
+    saved_model = tf.saved_model.load('wickr-bot.keras/')
     transformer_model = Soucoupe(saved_model, tokenizer)
 
     # Upload the model to Hugging Face
