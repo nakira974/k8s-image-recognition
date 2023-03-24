@@ -11,7 +11,7 @@ from keras import Model
 from keras.layers import Input, Flatten, Dense, Dropout, LSTM, TimeDistributed, Embedding
 from huggingface_hub import login
 from torch import nn
-from transformers import PreTrainedModel, BertTokenizer
+from transformers import PreTrainedModel, BertTokenizer,AutoConfig
 
 
 class Soucoupe(PreTrainedModel):
@@ -264,11 +264,11 @@ def main():
     decoded_output = tokenizer.decode(output[0][8], skip_special_tokens=True)
     print(decoded_output)
 
-    text_generation_model.save('wickr-bot.keras')
+    tf.keras.models.save_model(text_generation_model, 'wickr-bot')
 
     # Create the Hugging Face transformer class
-    saved_model = tf.saved_model.load('wickr-bot.keras/')
-    transformer_model = Soucoupe(saved_model, tokenizer)
+    saved_model = tf.saved_model.load('wickr-bot')
+    transformer_model = Soucoupe(saved_model, tokenizer, AutoConfig.from_pretrained('wickr-bot'))
 
     # Upload the model to Hugging Face
     login(token="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")
