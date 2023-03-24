@@ -10,6 +10,7 @@ tensorflow = "*"
 keras = "*"
 pillow = "==9.4.0"
 tokenizer = "*"
+tf = "*"
 
 [dev-packages]
 

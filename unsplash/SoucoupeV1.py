@@ -78,15 +78,9 @@ class Soucoupe(PreTrainedModel):
         encoder_input_matrix = embedding_matrix
         decoder_input_data = sequences.input_ids[:, :-1]
         decoder_output_data = Soucoupe.to_one_hot(sequences.input_ids[:, 1:], num_classes=28)
-        for i in range(5):
-            print('Text description:', descriptions[i])
-            print('Tokenized sequence:', sequences.input_ids[i])
 
         # Convert decoder_input_data to a Numpy array to avoid 'tuple' object error
         decoder_input_data = np.array(decoder_input_data)
-        for i in range(5):
-            print('Tokenized sequence:', sequences.input_ids[i])
-            print('Decoder input data:', decoder_input_data[i])
 
         return encoder_input_matrix, decoder_input_data, decoder_output_data
 
@@ -121,7 +115,7 @@ class Soucoupe(PreTrainedModel):
     @staticmethod
     def create_embedding_model():
         input_shape = (299, 299, 3)
-        embedding_dim = 128
+        embedding_dim = 64
 
         # Define the input layer
         input_layer = Input(shape=input_shape)
@@ -203,6 +197,28 @@ class Soucoupe(PreTrainedModel):
 
         return result
 
+    def prepare_inputs_for_generation(self, input_ids, **kwargs):
+        # Get the photo embeddings from the input_ids
+        photo_embeddings = input_ids[:, :128]
+
+        # Add an additional "batch" dimension to the photo embeddings tensor
+        photo_embeddings = tf.expand_dims(photo_embeddings, axis=0)
+
+        # Set the max length of the decoder input
+        kwargs["max_length"] = 64
+
+        # Return the photo embeddings as input and the rest of the kwargs as is
+        return {"image_embeddings": photo_embeddings}, kwargs
+
+    def generate_description(self, image_embeddings):
+        # Get the output from the SavedModel
+        output = self.saved_model(image_embeddings)
+
+        # Convert the output to a description string
+        decoded_output = self.tokenizer.decode(tf.squeeze(output).numpy().tolist(),
+                                               skip_special_tokens=True)
+        return decoded_output
+
 
 def main():
     path = './unsplash_datasets/'
@@ -238,11 +254,18 @@ def main():
     print('Decoder target data max:', decoder_target_data.max())
     decoder_input_data = np.clip(decoder_input_data, 0, text_generation_model.layers[1].input_dim - 2)
     text_generation_model.fit(decoder_input_data, decoder_target_data, epochs=10, batch_size=32)
-    output = text_generation_model.predict([encoder_input_data])
+    encoder_input_data = np.array(embeddings)
+    print(encoder_input_data.shape)
+    output = tf.convert_to_tensor(text_generation_model.predict(encoder_input_data))
 
     login(token="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")
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-    decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
+    print(output.shape)
+    output = output[0]
+
+    # Decode the output using the tokenizer
+    decoded_output = tokenizer.decode(output.argmax(axis=1), skip_special_tokens=True)
+    print(decoded_output)
     print(decoded_output)
 
     text_generation_model.save('wickr-bot.keras')
