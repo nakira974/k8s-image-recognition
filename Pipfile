@@ -12,10 +12,9 @@ pillow = "==9.4.0"
 tokenizer = "*"
 tf = "*"
 matplotlib = "*"
-decouple = "*"
 fastapi = "*"
 config = "*"
-
+uvicorn="*"
 [dev-packages]
 
 [requires]
