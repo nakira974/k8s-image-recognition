@@ -7,10 +7,6 @@ from fastapi.param_functions import Body
 from transformers import Pix2StructForConditionalGeneration, Pix2StructProcessor
 from decouple import config
 from huggingface_hub import login
-from fastapi.logger import logger as fastapi_logger
-from logging.handlers import RotatingFileHandler
-import logging
-import uvicorn
 
 app = FastAPI()
 API_KEY = config('HUGGING_FACE_TOKEN')
@@ -18,7 +14,6 @@ login(API_KEY)
 google_model = Pix2StructForConditionalGeneration.from_pretrained("Aloblock/descrivizio")
 processor = Pix2StructProcessor.from_pretrained("Aloblock/descrivizio")
 
-uvicorn.run(app, host="0.0.0.0", port=7777, log_config=f"./log.ini")
 
 class ImagePredictionController:
     def __init__(self, model: Pix2StructForConditionalGeneration, processor: Pix2StructProcessor) -> None:
@@ -27,12 +22,10 @@ class ImagePredictionController:
 
     async def predict(self, image_bytes: bytes) -> Dict[str, Any]:
         try:
-            print("Processing image...")
             image = Image.open(io.BytesIO(image_bytes))
             inputs = self.processor(images=image, return_tensors="pt")
             predictions = self.model.generate(**inputs)
             prediction_text = self.processor.decode(predictions[0], skip_special_tokens=True)
-            print("Image process ended...")
             return {"prediction": prediction_text}
         except:
             raise HTTPException(status_code=400, detail="Error processing image")
@@ -41,10 +34,6 @@ class ImagePredictionController:
 controller = ImagePredictionController(google_model, processor)
 
 
-@app.post('/model/descrivizio-001')
+@app.get('/model/descrivizio-001')
 async def predict_image(image_bytes: bytes = Body(...)):
     return await controller.predict(image_bytes)
-
-
-
-

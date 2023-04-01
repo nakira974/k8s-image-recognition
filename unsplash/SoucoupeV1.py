@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Union, Tuple
 
@@ -11,9 +12,9 @@ from keras import Model
 from keras.layers import Input, Flatten, Dense, Dropout, LSTM, TimeDistributed, Embedding
 from huggingface_hub import login
 from torch import nn
-from transformers import PreTrainedModel, BertTokenizer,AutoConfig
-
-
+from torch._inductor.codecache import cache_dir
+from transformers import PreTrainedModel, BertTokenizer, AutoConfig, BertConfig
+import matplotlib
 class Soucoupe(PreTrainedModel):
     def prepare_inputs_for_generation(self, input_ids, **kwargs):
         # Get the photo embeddings from the input_ids
@@ -49,12 +50,16 @@ class Soucoupe(PreTrainedModel):
         return decoded_output
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+    def from_pretrained(cls, pretrained_model_name_or_path, dtype=tf.float32, *model_args, **kwargs):
         if pretrained_model_name_or_path == "local":
             main()
-            saved_model = tf.saved_model.load("wickr-bot.keras")
+            saved_model = tf.saved_model.load("Aloblock/descrivizio")
             tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
             return cls(saved_model, tokenizer)
+
+        config = AutoConfig.from_pretrained(pretrained_model_name_or_path, *model_args, cache_dir=cache_dir,
+                                            **kwargs)
+        config.dtype = dtype
 
     def forward(self, image_embeddings):
         return self.generate_description(image_embeddings)
@@ -68,10 +73,11 @@ class Soucoupe(PreTrainedModel):
             descriptions.append(description)
 
         # Tokenize the textual descriptions
+        max_seq_length = 128
         google_bert_tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         sequences = google_bert_tokenizer(descriptions, padding='max_length',
                                           truncation=True,
-                                          max_length=64,
+                                          max_length=max_seq_length,
                                           return_tensors='tf')
 
         # Create input and output sequences for training
@@ -82,13 +88,13 @@ class Soucoupe(PreTrainedModel):
         # Convert decoder_input_data to a Numpy array to avoid 'tuple' object error
         decoder_input_data = np.array(decoder_input_data)
 
-        return encoder_input_matrix, decoder_input_data, decoder_output_data
+        return encoder_input_matrix, decoder_input_data, decoder_output_data, google_bert_tokenizer
 
     @staticmethod
     def create_embeddings(dataset, p_embedding_model):
         photo_ids = dataset['colors']['photo_id']
         color_hex_codes = dataset['colors']['hex']
-        batch_size = 32
+        batch_size = 128
         result_embeddings = []
 
         # Define the model and tokenizer
@@ -105,7 +111,6 @@ class Soucoupe(PreTrainedModel):
                 print("{} {} {}".format(r, g, b), end=" has been generated\n")
                 batch_images.append(img)
             batch_images = np.array([preprocess_input(np.array(img)) for img in batch_images])
-
             # Extract embeddings for the batch of images
             batch_embeddings = p_embedding_model.predict(batch_images)
             result_embeddings.extend(batch_embeddings)
@@ -115,7 +120,7 @@ class Soucoupe(PreTrainedModel):
     @staticmethod
     def create_embedding_model():
         input_shape = (299, 299, 3)
-        embedding_dim = 64
+        embedding_dim = 128
 
         # Define the input layer
         input_layer = Input(shape=input_shape)
@@ -124,12 +129,15 @@ class Soucoupe(PreTrainedModel):
         base_model = tf.keras.applications.InceptionV3(
             include_top=False,
             weights='imagenet',
-            input_shape=input_shape
+            input_tensor=input_layer
         )
-        x = base_model(input_layer)
+
+        # Set all layers in the base model to non-trainable
+        for layer in base_model.layers:
+            layer.trainable = False
 
         # Flatten the output from the pre-trained model
-        x = Flatten()(x)
+        x = Flatten()(base_model.output)
 
         # Add a dense layer with dropout
         x = Dense(512, activation='relu')(x)
@@ -139,13 +147,13 @@ class Soucoupe(PreTrainedModel):
         x = Dense(embedding_dim, activation='relu')(x)
         x = Dropout(0.5)(x)
 
-        # Define the output layer
-        output_layer = x
+        # Add an output layer to produce the embeddings
+        output_layer = Dense(embedding_dim)(x)
 
         # Create the model
-        result_embedding_model = Model(inputs=[input_layer], outputs=[output_layer])
+        model = Model(inputs=[input_layer], outputs=[output_layer])
 
-        return result_embedding_model
+        return model
 
     @staticmethod
     def create_text_generation_model(vocab_size):
@@ -156,10 +164,12 @@ class Soucoupe(PreTrainedModel):
         # Define the input layer for the decoder
         input_decoder_layer = Input(shape=(None,))
 
-        # Add an embedding layer
+        # Add a masking layer to mask out any inputs with value -1
+        masking_layer = tf.keras.layers.Masking(mask_value=-1)
         embedded_layer = Embedding(input_dim=vocab_size, output_dim=embedding_dim)
         embedded_output = embedded_layer(input_decoder_layer)
-        embedded_output = embedded_output[:, :, :]
+        embedded_output = masking_layer(embedded_output)
+
         # Define the LSTM decoder
         decoder_lstm = LSTM(latent_dim, return_sequences=True, return_state=True)
         decoder_outputs, _, _ = decoder_lstm(embedded_output)
@@ -241,8 +251,9 @@ def main():
     print(embeddings)
     encoder_input_data, \
         decoder_input_data, \
-        decoder_target_data = Soucoupe.prepare_data_for_text_generation(embeddings,
+        decoder_target_data, tokenizer = Soucoupe.prepare_data_for_text_generation(embeddings,
                                                                         datasets['photos'])
+    decoder_input_data[decoder_input_data < 0] = 0
 
     text_generation_model = Soucoupe.create_text_generation_model(decoder_input_data.max())
 
@@ -253,29 +264,35 @@ def main():
     print('Decoder target data min:', decoder_target_data.min())
     print('Decoder target data max:', decoder_target_data.max())
     decoder_input_data = np.clip(decoder_input_data, 0, text_generation_model.layers[1].input_dim - 2)
-    text_generation_model.fit(decoder_input_data, decoder_target_data, epochs=10, batch_size=32)
+    history = text_generation_model.fit(decoder_input_data, decoder_target_data, epochs=6, batch_size=128)
+
+    history_frame = pd.DataFrame(history.history)
+    history_frame.loc[:, ['loss', 'loss']].plot()
+    history_frame.loc[:, ['accuracy', 'accuracy']].plot()
     encoder_input_data = np.array(embeddings)
+    encoder_input_data[encoder_input_data < 0] = 0
     print(encoder_input_data.shape)
-    output = tf.convert_to_tensor(text_generation_model.predict(encoder_input_data))
 
-    login(token="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")
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    output = text_generation_model.predict(encoder_input_data, verbose=True)
     print(output.shape)
-    decoded_output = tokenizer.decode(output[0][8], skip_special_tokens=True)
-    print(decoded_output)
+    # My decoder =(
+    char_set = "abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\"/\\|_@#$%^&*~`+-=<>()[]{} "
+    # Create a lookup table to map one-hot encoded indices to characters
+    idx_to_char = {i: c for i, c in enumerate(char_set)}
+    # Find the index of the maximum value in each row of the output array
+    decoded_indices = np.argmax(output, axis=2)
+    # Map the indices back to their corresponding characters using the lookup table
+    decoded_strings = []
+    for indices in decoded_indices:
+        decoded_string = ""
+        for index in indices:
+            if index == 0:
+                break
+            decoded_string += idx_to_char[index]
+        decoded_strings.append(decoded_string)
+    print(decoded_strings)
 
-    tf.keras.models.save_model(text_generation_model, 'wickr-bot')
-
-    # Create the Hugging Face transformer class
-    saved_model = tf.saved_model.load('wickr-bot')
-    transformer_model = Soucoupe(saved_model, tokenizer, AutoConfig.from_pretrained('wickr-bot'))
-
-    # Upload the model to Hugging Face
-    login(token="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")
-    transformer_model.push_to_hub(repo_id="Aloblock/soucoupe",
-                                  model=transformer_model,
-                                  commit_message="First commit",
-                                  use_auth_token=True)
+    tf.keras.models.save_model(text_generation_model, 'Aloblock/descrivizio')
 
 
 if __name__ == '__main__':

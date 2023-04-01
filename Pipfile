@@ -11,7 +11,10 @@ keras = "*"
 pillow = "==9.4.0"
 tokenizer = "*"
 tf = "*"
-
+matplotlib = "*"
+fastapi = "*"
+config = "*"
+uvicorn="*"
 [dev-packages]
 
 [requires]
