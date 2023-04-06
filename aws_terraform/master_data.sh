@@ -10,7 +10,7 @@ sudo apt-get install -y kubelet kubeadm kubectl
 sudo kubeadm init --pod-network-cidr=192.168.0.0/16 > /tmp/k8s-init.log
 sudo mkdir -p /home/ubuntu/.kube
 sudo cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
-sudo chown ubuntu:ubuntu /home/ubuntu/.kube/config",
+sudo chown ubuntu:ubuntu /home/ubuntu/.kube/config
 kubectl taint nodes --all node-role.kubernetes.io/master-
 kubectl apply -f https://docs.projectcalico.org/v3.10/manifests/calico.yaml
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
