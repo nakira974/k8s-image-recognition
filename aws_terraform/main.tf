@@ -229,21 +229,18 @@ resource "aws_lb_listener" "k8s_listener" {
   }
 
   /* Add a rule for the Kubernetes dashboard path */
-  dynamic "rule" {
-    for_each = var.enable_dashboard ? [1] : []
-    content {
-      priority = 100
+  rule {
+    priority = 100
 
-      condition {
-        path_pattern {
-          values = ["/api/v1/namespaces/kubernetes-dashboard/*"]
-        }
+    condition = var.enable_dashboard ? {
+      path_pattern = {
+        values = ["/api/v1/namespaces/kubernetes-dashboard/*"]
       }
+    } : null
 
-      action {
-        type             = "forward"
-        target_group_arn = aws_lb_target_group.k8s_dashboard_tg.arn
-      }
+    action {
+      type             = "forward"
+      target_group_arn = aws_lb_target_group.k8s_dashboard_tg.arn
     }
   }
 }
