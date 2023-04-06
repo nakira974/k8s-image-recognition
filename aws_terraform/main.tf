@@ -19,6 +19,7 @@ resource "aws_key_pair" "nakira974-ssh" {
 resource "aws_instance" "k8s_node" {
   ami           = "ami-0f960c8194f5d8df5"
   instance_type = "t3.medium"
+  associate_public_ip_address = true
   count         = 3
   subnet_id     = aws_subnet.public[count.index].id
   key_name= "nakira974-ssh"
@@ -32,6 +33,7 @@ resource "aws_instance" "k8s_node" {
 
 resource "aws_instance" "k8s_master" {
   ami           = "ami-0f960c8194f5d8df5"
+  associate_public_ip_address = true
   instance_type = "t3.medium"
   key_name= "nakira974-ssh"
   subnet_id     = aws_subnet.public[0].id
@@ -259,4 +261,11 @@ output "k8s_dashboard_url" {
 
 output "k8s_dashboard_token" {
   value = trim(file("/tmp/dashboard-admin-token.txt"), "\n")
+}
+
+output "public_ips" {
+  value = [
+    aws_instance.k8s_master.public_ip,
+    aws_instance.k8s_node.*.public_ip
+  ]
 }
