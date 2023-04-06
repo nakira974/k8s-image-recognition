@@ -4,8 +4,8 @@ provider "aws" {
 }
 
 resource "aws_instance" "k8s_node" {
-  ami           = "ami-0f2ed11567d3ac861"
-  instance_type = "t3a.medium"
+  ami           = "ami-0f960c8194f5d8df5"
+  instance_type = "t3.medium"
   count         = 3
 
   tags = {
@@ -17,6 +17,7 @@ resource "aws_instance" "k8s_node" {
     user        = "ubuntu"
     private_key = file("C:\\Users\\maxim/.ssh/id_rsa")
     host        = self.public_ip
+    agent       = true
   }
 
   provisioner "remote-exec" {
@@ -38,8 +39,8 @@ resource "aws_instance" "k8s_node" {
 }
 
 resource "aws_instance" "k8s_master" {
-  ami           = "ami-0f2ed11567d3ac861"
-  instance_type = "t3a.medium"
+  ami           = "ami-0f960c8194f5d8df5"
+  instance_type = "t3.medium"
 
   tags = {
     Name = "k8s-master"
@@ -48,8 +49,9 @@ resource "aws_instance" "k8s_master" {
   connection {
     type        = "ssh"
     user        = "ubuntu"
-    private_key = file("~/.ssh/id_rsa")
+    private_key = file("C:\\Users\\maxim/.ssh/id_rsa")
     host        = self.public_ip
+    agent       = true
   }
 
   provisioner "remote-exec" {
@@ -280,5 +282,5 @@ output "k8s_dashboard_url" {
 }
 
 output "k8s_dashboard_token" {
-  value = trim(file("C:\\users\\maxim\\dashboard-amin-token.txt"), "\n")
+  value = trim(file("C:\\users\\maxim\\dashboard-admin-token.txt"), "\n")
 }
