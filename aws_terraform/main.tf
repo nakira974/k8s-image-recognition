@@ -227,24 +227,7 @@ resource "aws_lb_listener" "k8s_listener" {
     target_group_arn = aws_lb_target_group.k8s_tg.arn
     type             = "forward"
   }
-
-  /* Add a rule for the Kubernetes dashboard path */
-  rule {
-    priority = 100
-
-    condition = var.enable_dashboard ? {
-      path_pattern = {
-        values = ["/api/v1/namespaces/kubernetes-dashboard/*"]
-      }
-    } : null
-
-    action {
-      type             = "forward"
-      target_group_arn = aws_lb_target_group.k8s_dashboard_tg.arn
-    }
-  }
 }
-
 # Create an additional target group for the Kubernetes dashboard service
 resource "aws_lb_target_group" "k8s_dashboard_tg" {
   name_prefix = "k8s-dashboard-tg"
