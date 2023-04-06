@@ -1,5 +1,6 @@
 provider "aws" {
   region = "eu-north-1"
+  profile = "nakira974"
 }
 
 resource "aws_instance" "k8s_node" {
@@ -14,7 +15,7 @@ resource "aws_instance" "k8s_node" {
   connection {
     type        = "ssh"
     user        = "ubuntu"
-    private_key = file("~/.ssh/id_rsa")
+    private_key = file("C:\\Users\\maxim/.ssh/id_rsa")
     host        = self.public_ip
   }
 
@@ -79,6 +80,7 @@ resource "aws_instance" "k8s_master" {
   }
 }
 
+
 resource "aws_lb" "k8s_lb" {
   name               = "k8s-lb"
   internal           = false
@@ -100,7 +102,9 @@ resource "aws_lb" "k8s_lb" {
   }
 }
 
-data "aws_availability_zones" "available" {}
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 
 resource "aws_subnet" "public" {
   count = length(data.aws_availability_zones.available.names)
@@ -200,9 +204,19 @@ resource "aws_network_interface_attachment" "k8s_master_eni" {
 }
 
 resource "aws_network_interface_attachment" "k8s_node_eni" {
-  instance_id = aws_instance.k8s_node.*.id
-  device_index = 0
-  network_interface_id = aws_network_interface.k8s_node_eni.*.id
+  for_each = { for idx, instance in aws_instance.k8s_node : idx => instance }
+
+  instance_id         = each.value.id
+  device_index        = 0
+  network_interface_id = aws_network_interface.k8s_node_eni[each.key].id
+}
+
+resource "aws_network_interface" "k8s_node_eni" {
+  for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
+
+  subnet_id        = each.value.id
+  security_groups  = [aws_security_group.k8s_node_sg.id]
+  tags             = { Name = "k8s-node-eni-${each.key + 1}" }
 }
 
 resource "aws_network_interface" "k8s_master_eni" {
@@ -214,20 +228,6 @@ resource "aws_network_interface" "k8s_master_eni" {
 
   tags = {
     Name = "k8s-master-eni"
-  }
-}
-
-resource "aws_network_interface" "k8s_node_eni" {
-  count = length(aws_subnet.public.*.id)
-
-  subnet_id = aws_subnet.public[count.index].id
-
-  security_groups = [
-    aws_security_group.k8s_node_sg.id,
-  ]
-
-  tags = {
-    Name = "k8s-node-eni-${count.index + 1}"
   }
 }
 
@@ -280,5 +280,5 @@ output "k8s_dashboard_url" {
 }
 
 output "k8s_dashboard_token" {
-  value = trim(file("/tmp/dashboard-admin-token.txt"), "\n")
+  value = trim(file("C:\\users\\maxim\\dashboard-amin-token.txt"), "\n")
 }
