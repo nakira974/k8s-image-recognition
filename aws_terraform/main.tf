@@ -21,7 +21,7 @@ resource "aws_instance" "k8s_node" {
   instance_type = "t3.medium"
   count         = 3
   subnet_id     = aws_subnet.public[count.index].id
-  #key_name= "nakira974-ssh"
+  key_name= "nakira974-ssh"
   tags = {
     Name = "k8s-node-${count.index}"
   }
@@ -33,7 +33,7 @@ resource "aws_instance" "k8s_node" {
 resource "aws_instance" "k8s_master" {
   ami           = "ami-0f960c8194f5d8df5"
   instance_type = "t3.medium"
-  #key_name= "nakira974-ssh"
+  key_name= "nakira974-ssh"
   subnet_id     = aws_subnet.public[0].id
   tags = {
     Name = "k8s-master"
