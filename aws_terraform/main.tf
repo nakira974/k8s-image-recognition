@@ -86,7 +86,7 @@ resource "aws_subnet" "private" {
   count = length(data.aws_availability_zones.available.names)
 
   vpc_id     = aws_vpc.k8s_vpc.id
-  cidr_block = "192.168.${count.index}.0/24"
+  cidr_block = "172.31.${count.index  + 2}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
