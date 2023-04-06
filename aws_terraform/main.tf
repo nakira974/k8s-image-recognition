@@ -230,7 +230,7 @@ resource "aws_lb_listener" "k8s_listener" {
 }
 # Create an additional target group for the Kubernetes dashboard service
 resource "aws_lb_target_group" "k8s_dashboard_tg" {
-  name_prefix = "k8s-tg"
+  name_prefix = "kda-tg"
   port        = 443
   protocol    = "HTTPS"
   vpc_id      = aws_vpc.k8s_vpc.id
