@@ -239,10 +239,6 @@ resource "aws_lb_target_group" "k8s_dashboard_tg" {
     path = "/"
 
     matcher = "200-399"
-    interval_seconds = 30
-    timeout_seconds = 10
-    healthy_threshold_count = 2
-    unhealthy_threshold_count = 2
   }
 
   depends_on = [
