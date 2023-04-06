@@ -1,7 +1,5 @@
 provider "aws" {
-  region = "us-east-1"
-  access_key = "ASIAT7N6SA7IFYGIN6IW"
-  secret_key = "+pUB6q9z4zD8cgOYYPs4DSSK707iRJaSH1ys+HEH aws_session_token=FwoGZXIvYXdzEMb//////////wEaDHtbnB/vm82okfmNHCK8AdA7msH1Iaqf22T7pzfysjTzgP8042Ti++goiLEoiA6rdCRPrexPZ5sZI/IEn5iIFr9gI2m1+zDJOLNQ+vU4BApHPAvJd2ypMix7nKLkwCfWCqtkI9U3P/T8x/Loc5XapA5nuENmpcMNXD2hk/hKuqVoL20MuyWo6hKr+4Xx5/Hz1WbNcB0H9Zh8t3E1pKmrreHDgMgf54xKfeKiZm6rBWzV8TG/0NO2N5i3bKeqK2NkBcjFNt0SSjysmp+eKMSkm6EGMi0DvZXDmgbafA7G9eMSxztTDB3Mv6VxU24rnISUypq3A9yhlfMmUr8/H/ppGzk="
+  region = "eu-north-1"
 }
 
 resource "aws_instance" "k8s_node" {
