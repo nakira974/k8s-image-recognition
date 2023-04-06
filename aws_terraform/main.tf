@@ -101,30 +101,26 @@ resource "aws_eip" "nat" {
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.private[0].id
-
-  depends_on = [
-    aws_internet_gateway.k8s_igw,
-    aws_subnet.private,
-    aws_route_table_association.private,
-  ]
 }
 
 resource "aws_route_table" "private" {
+  count  = length(aws_subnet.private.*.id)
   vpc_id = aws_vpc.k8s_vpc.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.nat.id
   }
 
   tags = {
-    Name = "k8s-private-route-table"
+    Name = "k8s-private-route-table-${count.index + 1}"
   }
 }
 
 resource "aws_route_table_association" "private" {
-  subnet_id      = aws_subnet.private[0].id
-  route_table_id = aws_route_table.private.id
+  count          = length(aws_subnet.private.*.id)
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = element(aws_route_table.private.*.id, count.index)
 }
 
 resource "aws_security_group" "k8s_node_sg" {
