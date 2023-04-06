@@ -15,9 +15,10 @@ resource "aws_instance" "k8s_node" {
   connection {
     type        = "ssh"
     user        = "ubuntu"
-    private_key = file("C:\\Users\\maxim/.ssh/id_rsa")
+    port        = 22
+    private_key = "${file("~/.ssh/id_rsa")}"
     host        = self.public_ip
-    agent       = true
+    agent       = false
   }
 
   provisioner "remote-exec" {
@@ -32,10 +33,6 @@ resource "aws_instance" "k8s_node" {
       "sudo apt-get install -y kubelet kubeadm kubectl",
     ]
   }
-
-  provisioner "local-exec" {
-    command = "sleep 30 && ssh-add -D && ssh-add ~/.ssh/id_rsa && echo ${aws_instance.k8s_master.public_ip} > k8s-master-ip.txt && chmod 400 k8s-master-ip.txt"
-  }
 }
 
 resource "aws_instance" "k8s_master" {
@@ -49,9 +46,10 @@ resource "aws_instance" "k8s_master" {
   connection {
     type        = "ssh"
     user        = "ubuntu"
-    private_key = file("C:\\Users\\maxim/.ssh/id_rsa")
+    port        = 22
+    private_key = "${file("~/.ssh/id_rsa")}"
     host        = self.public_ip
-    agent       = true
+    agent       = false
   }
 
   provisioner "remote-exec" {
@@ -77,9 +75,6 @@ resource "aws_instance" "k8s_master" {
     ]
   }
 
-  provisioner "local-exec" {
-    command = "sleep 60 && ssh-add -D && ssh-add ~/.ssh/id_rsa && scp -o StrictHostKeyChecking=no ubuntu@${self.public_ip}:/tmp/k8s-init.log k8s-init.log"
-  }
 }
 
 
@@ -282,5 +277,5 @@ output "k8s_dashboard_url" {
 }
 
 output "k8s_dashboard_token" {
-  value = trim(file("C:\\users\\maxim\\dashboard-admin-token.txt"), "\n")
+  value = trim(file("/tmp/dashboard-admin-token.txt"), "\n")
 }
