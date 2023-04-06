@@ -211,6 +211,13 @@ resource "aws_lb_target_group" "k8s_tg" {
   ]
 }
 
+
+variable "enable_dashboard" {
+    description = "Whether to enable Kubernetes dashboard access through the load balancer"
+    type        = bool
+    default     = true
+  }
+
 resource "aws_lb_listener" "k8s_listener" {
   load_balancer_arn = aws_lb.k8s_lb.arn
   port              = 80
@@ -221,19 +228,12 @@ resource "aws_lb_listener" "k8s_listener" {
     type             = "forward"
   }
 
-  }
-
-variable "enable_dashboard" {
-    description = "Whether to enable Kubernetes dashboard access through the load balancer"
-    type        = bool
-    default     = true
-  }
-
-  # Add a rule for the Kubernetes dashboard path
+  /* Add a rule for the Kubernetes dashboard path */
   dynamic "rule" {
     for_each = var.enable_dashboard ? [1] : []
     content {
       priority = 100
+
       condition {
         path_pattern {
           values = ["/api/v1/namespaces/kubernetes-dashboard/*"]
@@ -246,6 +246,7 @@ variable "enable_dashboard" {
       }
     }
   }
+}
 
 # Create an additional target group for the Kubernetes dashboard service
 resource "aws_lb_target_group" "k8s_dashboard_tg" {
