@@ -215,14 +215,59 @@ resource "aws_lb_listener" "k8s_listener" {
   load_balancer_arn = aws_lb.k8s_lb.arn
   port              = 80
   protocol          = "HTTP"
+
   default_action {
     target_group_arn = aws_lb_target_group.k8s_tg.arn
     type             = "forward"
   }
 
+  }
+
+variable "enable_dashboard" {
+    description = "Whether to enable Kubernetes dashboard access through the load balancer"
+    type        = bool
+    default     = true
+  }
+
+  # Add a rule for the Kubernetes dashboard path
+  dynamic "rule" {
+    for_each = var.enable_dashboard ? [1] : []
+    content {
+      priority = 100
+      condition {
+        path_pattern {
+          values = ["/api/v1/namespaces/kubernetes-dashboard/*"]
+        }
+      }
+
+      action {
+        type             = "forward"
+        target_group_arn = aws_lb_target_group.k8s_dashboard_tg.arn
+      }
+    }
+  }
+
+# Create an additional target group for the Kubernetes dashboard service
+resource "aws_lb_target_group" "k8s_dashboard_tg" {
+  name_prefix = "k8s-dashboard-tg"
+  port        = 443
+  protocol    = "HTTPS"
+  vpc_id      = aws_vpc.k8s_vpc.id
+
+  health_check {
+    path = "/"
+
+    matcher = "200-399"
+    interval_seconds = 30
+    timeout_seconds = 10
+    healthy_threshold_count = 2
+    unhealthy_threshold_count = 2
+  }
+
   depends_on = [
-    aws_lb.k8s_lb,
-    aws_lb_target_group.k8s_tg,
+    aws_instance.k8s_master,
+    aws_subnet.public,
+    aws_security_group.k8s_node_sg,
   ]
 }
 
