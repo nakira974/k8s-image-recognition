@@ -86,13 +86,21 @@ resource "aws_route_table_association" "private" {
     aws_route_table.private,
   ]
 }
+data "aws_subnet" "public" {
+  for_each = toset([for idx, _ in aws_subnet.public : aws_subnet.public[idx].id])
+
+  id = each.key
+}
 
 resource "aws_network_interface" "k8s_node_eni" {
-  for_each      = { for idx, subnet in aws_subnet.public : idx => subnet }
-  subnet_id     = aws_subnet.public[each.key].id
-  security_groups   = [aws_security_group.k8s_node_sg.id]
-  tags             = { Name = "k8s-node-eni-${each.key + 1}" }
-  availability_zone = aws_subnet.public[each.key].availability_zone
+  for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
+
+  subnet_id = each.value.id
+  security_groups = [aws_security_group.k8s_node_sg.id]
+
+  tags = {
+    Name = "k8s-node-eni-${each.key + 1}"
+  }
 
   # Add a reference to the private route table with a route to the NAT Gateway
   depends_on = [
@@ -100,6 +108,8 @@ resource "aws_network_interface" "k8s_node_eni" {
   ]
 
   private_ip = "10.0.${each.key}.100"
+
+  availability_zone = data.aws_subnet.public[each.value.id].availability_zone
 }
 
 resource "aws_network_interface" "k8s_master_eni" {
