@@ -16,17 +16,33 @@ resource "aws_key_pair" "nakira974-ssh" {
   public_key = file("~/.ssh/id_rsa.pub")
 }
 
+# New resource to allocate an Elastic IP for the NAT Gateway
+resource "aws_eip" "nat" {
+  vpc = true
+}
+
+# New resource to create the NAT Gateway in a public subnet
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
+}
+
 resource "aws_instance" "k8s_node" {
   ami           = "ami-064087b8d355e9051"
   instance_type = "t3.medium"
   associate_public_ip_address = true
   count         = 3
-  subnet_id     = aws_subnet.public[count.index].id
   key_name= "nakira974-ssh"
   tags = {
     Name = "k8s-node-${count.index}"
   }
 
+  network_interface {
+    device_index       = 0
+    subnet_id          = aws_subnet.public.id
+    security_groups    = [aws_security_group.k8s_node_sg.id]
+    network_interface_id = aws_network_interface.k8s_node_eni[count.index].id
+  }
 
   user_data = "${data.template_file.node_data.template}"
 }
@@ -36,13 +52,70 @@ resource "aws_instance" "k8s_master" {
   associate_public_ip_address = true
   instance_type = "t3.medium"
   key_name= "nakira974-ssh"
-  subnet_id     = aws_subnet.public[0].id
+  subnet_id     = aws_subnet.public.id
   tags = {
     Name = "k8s-master"
   }
 
+  network_interface {
+    device_index       = 0
+    subnet_id          = aws_subnet.public.id
+    security_groups    = [aws_security_group.k8s_node_sg.id]
+    network_interface_id = aws_network_interface.k8s_master_eni.id
+  }
 
   user_data = "${data.template_file.master_data.template}"
+}
+# Add a NAT Gateway route to the Kubernetes nodes and master instances via the ENIs
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.k8s_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+
+  tags = {
+    Name = "k8s-private-route-table"
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  count = length(aws_subnet.public.*.id)
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_network_interface" "k8s_node_eni" {
+  for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
+  subnet_id        = each.value.id
+  security_groups  = [aws_security_group.k8s_node_sg.id]
+  tags             = { Name = "k8s-node-eni-${each.key + 1}" }
+
+  # Add a reference to the private route table with a route to the NAT Gateway
+  depends_on = [
+    aws_route_table_association.private,
+  ]
+
+  private_ip = "10.0.${each.key}.100"
+}
+
+resource "aws_network_interface" "k8s_master_eni" {
+  subnet_id = aws_subnet.public[0].id
+  security_groups = [
+    aws_security_group.k8s_node_sg.id,
+  ]
+
+  tags = {
+    Name = "k8s-master-eni"
+  }
+
+  # Add a reference to the private route table with a route to the NAT Gateway
+  depends_on = [
+    aws_route_table_association.private,
+  ]
+
+  private_ip = "10.0.0.100"
 }
 
 
@@ -65,6 +138,7 @@ resource "aws_lb" "k8s_lb" {
     Name = "k8s-lb"
   }
 }
+
 
 data "aws_availability_zones" "available" {
   state = "available"
@@ -203,23 +277,6 @@ resource "aws_network_interface_attachment" "k8s_node_eni" {
   network_interface_id = aws_network_interface.k8s_node_eni[each.key].id
 }
 
-resource "aws_network_interface" "k8s_node_eni" {
-  for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
-  subnet_id        = each.value.id
-  security_groups  = [aws_security_group.k8s_node_sg.id]
-  tags             = { Name = "k8s-node-eni-${each.key + 1}" }
-}
-
-resource "aws_network_interface" "k8s_master_eni" {
-  subnet_id = aws_subnet.public[0].id
-  security_groups = [
-    aws_security_group.k8s_node_sg.id,
-  ]
-
-  tags = {
-    Name = "k8s-master-eni"
-  }
-}
 
 resource "aws_lb_target_group" "k8s_tg" {
   name_prefix = "k8s-tg"
@@ -237,10 +294,10 @@ resource "aws_lb_target_group" "k8s_tg" {
 
 
 variable "enable_dashboard" {
-    description = "Whether to enable Kubernetes dashboard access through the load balancer"
-    type        = bool
-    default     = true
-  }
+  description = "Whether to enable Kubernetes dashboard access through the load balancer"
+  type        = bool
+  default     = true
+}
 
 resource "aws_lb_listener" "k8s_listener" {
   load_balancer_arn = aws_lb.k8s_lb.arn
