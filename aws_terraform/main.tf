@@ -157,26 +157,6 @@ resource "aws_lb" "k8s_lb" {
 }
 
 
-resource "aws_lb" "k8s_lb" {
-  name               = "k8s-lb"
-  internal           = false
-  load_balancer_type = "application"
-  subnets = aws_subnet.public.*.id
-
-  security_groups = [
-    aws_security_group.k8s_lb_sg.id,
-  ]
-
-  depends_on = [
-    aws_instance.k8s_master,
-    aws_instance.k8s_node,
-  ]
-
-  tags = {
-    Name = "k8s-lb"
-  }
-}
-
 data "aws_availability_zones" "available" {
   state = "available"
 }
