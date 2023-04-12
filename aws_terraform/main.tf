@@ -10,6 +10,7 @@ resource "aws_vpc" "k8s_vpc" {
     Name = "k8s-vpc"
   }
 }
+
 data "template_file" "master_data" {
   template = "${file("master_data.sh")}"
 }
@@ -87,10 +88,11 @@ resource "aws_route_table_association" "private" {
 }
 
 resource "aws_network_interface" "k8s_node_eni" {
-  for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
-  subnet_id        = each.value.id
-  security_groups  = [aws_security_group.k8s_node_sg.id]
+  for_each      = { for idx, subnet in aws_subnet.public : idx => subnet }
+  subnet_id     = aws_subnet.public[each.key].id
+  security_groups   = [aws_security_group.k8s_node_sg.id]
   tags             = { Name = "k8s-node-eni-${each.key + 1}" }
+  availability_zone = aws_subnet.public[each.key].availability_zone
 
   # Add a reference to the private route table with a route to the NAT Gateway
   depends_on = [
