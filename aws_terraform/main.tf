@@ -16,6 +16,17 @@ resource "aws_key_pair" "nakira974-ssh" {
   public_key = file("~/.ssh/id_rsa.pub")
 }
 
+# New resource to allocate an Elastic IP for the NAT Gateway
+resource "aws_eip" "nat" {
+  vpc = true
+}
+
+# New resource to create the NAT Gateway in a public subnet
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
+}
+
 resource "aws_instance" "k8s_node" {
   ami           = "ami-064087b8d355e9051"
   instance_type = "t3.medium"
@@ -27,6 +38,20 @@ resource "aws_instance" "k8s_node" {
     Name = "k8s-node-${count.index}"
   }
 
+  # Add a reference to the default route table with a route to the NAT Gateway
+  network_interface {
+    device_index = 0
+    subnet_id = aws_subnet.public[count.index].id
+
+    security_groups = [
+      aws_security_group.k8s_node_sg.id,
+    ]
+
+    # Add a reference to the route table with a route to the NAT Gateway
+    attachment {
+      id = aws_route_table_association.public[count.index].id
+    }
+  }
 
   user_data = "${data.template_file.node_data.template}"
 }
@@ -41,8 +66,94 @@ resource "aws_instance" "k8s_master" {
     Name = "k8s-master"
   }
 
+  # Add a reference to the default route table with a route to the NAT Gateway
+  network_interface {
+    device_index = 0
+    subnet_id = aws_subnet.public[0].id
+
+    security_groups = [
+      aws_security_group.k8s_node_sg.id,
+    ]
+
+    # Add a reference to the route table with a route to the NAT Gateway
+    attachment {
+      id = aws_route_table_association.public[0].id
+    }
+  }
 
   user_data = "${data.template_file.master_data.template}"
+}
+# Add a NAT Gateway route to the Kubernetes nodes and master instances via the ENIs
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.k8s_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+
+  tags = {
+    Name = "k8s-private-route-table"
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  count = length(aws_subnet.public.*.id)
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_network_interface" "k8s_node_eni" {
+  for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
+  subnet_id        = each.value.id
+  security_groups  = [aws_security_group.k8s_node_sg.id]
+  tags             = { Name = "k8s-node-eni-${each.key + 1}" }
+
+  # Add a reference to the private route table with a route to the NAT Gateway
+  depends_on = [
+    aws_route_table_association.private,
+  ]
+
+  private_ip = "10.0.${each.key}.100"
+}
+
+resource "aws_network_interface" "k8s_master_eni" {
+  subnet_id = aws_subnet.public[0].id
+  security_groups = [
+    aws_security_group.k8s_node_sg.id,
+  ]
+
+  tags = {
+    Name = "k8s-master-eni"
+  }
+
+  # Add a reference to the private route table with a route to the NAT Gateway
+  depends_on = [
+    aws_route_table_association.private,
+  ]
+
+  private_ip = "10.0.0.100"
+}
+
+
+resource "aws_lb" "k8s_lb" {
+  name               = "k8s-lb"
+  internal           = false
+  load_balancer_type = "application"
+  subnets = aws_subnet.public.*.id
+
+  security_groups = [
+    aws_security_group.k8s_lb_sg.id,
+  ]
+
+  depends_on = [
+    aws_instance.k8s_master,
+    aws_instance.k8s_node,
+  ]
+
+  tags = {
+    Name = "k8s-lb"
+  }
 }
 
 
@@ -223,10 +334,10 @@ resource "aws_lb_target_group" "k8s_tg" {
 
 
 variable "enable_dashboard" {
-    description = "Whether to enable Kubernetes dashboard access through the load balancer"
-    type        = bool
-    default     = true
-  }
+  description = "Whether to enable Kubernetes dashboard access through the load balancer"
+  type        = bool
+  default     = true
+}
 
 resource "aws_lb_listener" "k8s_listener" {
   load_balancer_arn = aws_lb.k8s_lb.arn
