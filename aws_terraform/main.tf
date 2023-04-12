@@ -76,6 +76,11 @@ resource "aws_route_table_association" "private" {
   count = length(aws_subnet.public.*.id)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.private.id
+
+  depends_on = [
+    aws_nat_gateway.nat,
+    aws_route_table.private,
+  ]
 }
 
 resource "aws_network_interface" "k8s_node_eni" {
