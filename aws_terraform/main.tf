@@ -86,7 +86,7 @@ resource "aws_subnet" "private" {
   count = length(data.aws_availability_zones.available.names)
 
   vpc_id     = aws_vpc.k8s_vpc.id
-  cidr_block = "10.${count.index + 1}.0.0/24"
+  cidr_block = "192.168.${count.index + 1}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
@@ -180,6 +180,11 @@ resource "aws_vpc" "k8s_vpc" {
   tags = {
     Name = "k8s-vpc"
   }
+}
+
+resource "aws_vpc_ipv4_cidr_block_association" "k8s_vpc_private_network" {
+  vpc_id = "${aws_vpc.k8s_vpc.id}"
+  cidr_block = "192.168.0.0/16"
 }
 
 resource "aws_internet_gateway" "k8s_igw" {
