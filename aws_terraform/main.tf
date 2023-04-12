@@ -300,23 +300,6 @@ resource "aws_network_interface_attachment" "k8s_node_eni" {
   network_interface_id = aws_network_interface.k8s_node_eni[each.key].id
 }
 
-resource "aws_network_interface" "k8s_node_eni" {
-  for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
-  subnet_id        = each.value.id
-  security_groups  = [aws_security_group.k8s_node_sg.id]
-  tags             = { Name = "k8s-node-eni-${each.key + 1}" }
-}
-
-resource "aws_network_interface" "k8s_master_eni" {
-  subnet_id = aws_subnet.public[0].id
-  security_groups = [
-    aws_security_group.k8s_node_sg.id,
-  ]
-
-  tags = {
-    Name = "k8s-master-eni"
-  }
-}
 
 resource "aws_lb_target_group" "k8s_tg" {
   name_prefix = "k8s-tg"
