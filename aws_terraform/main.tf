@@ -270,12 +270,14 @@ resource "aws_network_interface_attachment" "k8s_node_eni" {
   instance_id         = each.value.id
   device_index        = 1
   network_interface_id = aws_network_interface.k8s_node_eni[each.key].id
+  availability_zone    = aws_subnet.public[each.key].availability_zone
 }
 
 resource "aws_network_interface_attachment" "k8s_master_eni" {
   instance_id          = aws_instance.k8s_master.id
   device_index         = 1
   network_interface_id = aws_network_interface.k8s_master_eni.id
+  availability_zone    = aws_subnet.public[0].availability_zone
 }
 
 resource "aws_lb_target_group" "k8s_tg" {
