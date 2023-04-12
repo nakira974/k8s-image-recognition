@@ -256,11 +256,6 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_network_interface_attachment" "k8s_master_eni" {
-  instance_id = aws_instance.k8s_master.id
-  device_index = 1
-  network_interface_id = aws_network_interface.k8s_master_eni.id
-}
 
 resource "aws_network_interface_attachment" "k8s_node_eni" {
   for_each = { for idx, instance in aws_instance.k8s_node : idx => instance }
