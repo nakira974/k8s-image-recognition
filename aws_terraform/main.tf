@@ -82,47 +82,6 @@ resource "aws_subnet" "public" {
   }
 }
 
-resource "aws_subnet" "private" {
-  count = length(data.aws_availability_zones.available.names)
-
-  vpc_id     = aws_vpc.k8s_vpc.id
-  cidr_block = "10.${count.index + 1}.0.0/24"
-  availability_zone = data.aws_availability_zones.available.names[count.index]
-
-  tags = {
-    Name = "k8s-private-subnet-${count.index + 1}"
-  }
-}
-
-resource "aws_eip" "nat" {
-  vpc = true
-}
-
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.private[0].id
-}
-
-resource "aws_route_table" "private" {
-  count  = length(aws_subnet.private.*.id)
-  vpc_id = aws_vpc.k8s_vpc.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat.id
-  }
-
-  tags = {
-    Name = "k8s-private-route-table-${count.index + 1}"
-  }
-}
-
-resource "aws_route_table_association" "private" {
-  count          = length(aws_subnet.private.*.id)
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = element(aws_route_table.private.*.id, count.index)
-}
-
 resource "aws_security_group" "k8s_node_sg" {
   name_prefix = "k8s-node-"
   vpc_id = aws_vpc.k8s_vpc.id
@@ -188,6 +147,7 @@ resource "aws_vpc" "k8s_vpc" {
     Name = "k8s-vpc"
   }
 }
+
 
 resource "aws_internet_gateway" "k8s_igw" {
   vpc_id = aws_vpc.k8s_vpc.id
