@@ -38,19 +38,11 @@ resource "aws_instance" "k8s_node" {
     Name = "k8s-node-${count.index}"
   }
 
-  # Add a reference to the default route table with a route to the NAT Gateway
   network_interface {
-    device_index = 0
-    subnet_id = aws_subnet.public[count.index].id
-
-    security_groups = [
-      aws_security_group.k8s_node_sg.id,
-    ]
-
-    # Add a reference to the route table with a route to the NAT Gateway
-    attachment {
-      id = aws_route_table_association.public[count.index].id
-    }
+    device_index       = 0
+    subnet_id          = aws_subnet.public[count.index].id
+    security_groups    = [aws_security_group.k8s_node_sg.id]
+    network_interface_id = aws_network_interface.k8s_node_eni[count.index].id
   }
 
   user_data = "${data.template_file.node_data.template}"
@@ -66,19 +58,11 @@ resource "aws_instance" "k8s_master" {
     Name = "k8s-master"
   }
 
-  # Add a reference to the default route table with a route to the NAT Gateway
   network_interface {
-    device_index = 0
-    subnet_id = aws_subnet.public[0].id
-
-    security_groups = [
-      aws_security_group.k8s_node_sg.id,
-    ]
-
-    # Add a reference to the route table with a route to the NAT Gateway
-    attachment {
-      id = aws_route_table_association.public[0].id
-    }
+    device_index       = 0
+    subnet_id          = aws_subnet.public[0].id
+    security_groups    = [aws_security_group.k8s_node_sg.id]
+    network_interface_id = aws_network_interface.k8s_master_eni[count.index].id
   }
 
   user_data = "${data.template_file.master_data.template}"
