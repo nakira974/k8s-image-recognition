@@ -51,7 +51,7 @@ resource "aws_instance" "k8s_master" {
   associate_public_ip_address = true
   instance_type = "t3.medium"
   key_name= "nakira974-ssh"
-  subnet_id     = aws_subnet.public.id
+
   tags = {
     Name = "k8s-master"
   }
