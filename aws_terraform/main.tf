@@ -37,14 +37,13 @@ resource "aws_instance" "k8s_node" {
     Name = "k8s-node-${count.index}"
   }
 
-  network_interface {
-    device_index       = 0
-    subnet_id          = aws_subnet.public.id
-    security_groups    = [aws_security_group.k8s_node_sg.id]
-    network_interface_id = aws_network_interface.k8s_node_eni[count.index].id
-  }
-
   user_data = "${data.template_file.node_data.template}"
+}
+
+resource "aws_network_interface_attachment" "k8s_master_eni" {
+  instance_id          = aws_instance.k8s_master.id
+  device_index         = 1
+  network_interface_id = aws_network_interface.k8s_master_eni.id
 }
 
 resource "aws_instance" "k8s_master" {
@@ -55,13 +54,6 @@ resource "aws_instance" "k8s_master" {
   subnet_id     = aws_subnet.public.id
   tags = {
     Name = "k8s-master"
-  }
-
-  network_interface {
-    device_index       = 0
-    subnet_id          = aws_subnet.public.id
-    security_groups    = [aws_security_group.k8s_node_sg.id]
-    network_interface_id = aws_network_interface.k8s_master_eni.id
   }
 
   user_data = "${data.template_file.master_data.template}"
