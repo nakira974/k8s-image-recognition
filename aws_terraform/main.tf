@@ -17,7 +17,7 @@ resource "aws_key_pair" "nakira974-ssh" {
 }
 
 resource "aws_instance" "k8s_node" {
-  ami           = "ami-0f960c8194f5d8df5"
+  ami           = "ami-064087b8d355e9051"
   instance_type = "t3.medium"
   associate_public_ip_address = true
   count         = 3
@@ -32,7 +32,7 @@ resource "aws_instance" "k8s_node" {
 }
 
 resource "aws_instance" "k8s_master" {
-  ami           = "ami-0f960c8194f5d8df5"
+  ami           = "ami-064087b8d355e9051"
   associate_public_ip_address = true
   instance_type = "t3.medium"
   key_name= "nakira974-ssh"
