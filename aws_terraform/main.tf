@@ -32,7 +32,6 @@ resource "aws_instance" "k8s_node" {
   instance_type = "t3.medium"
   associate_public_ip_address = true
   count         = 3
-  subnet_id     = aws_subnet.public[count.index].id
   key_name= "nakira974-ssh"
   tags = {
     Name = "k8s-node-${count.index}"
@@ -40,7 +39,7 @@ resource "aws_instance" "k8s_node" {
 
   network_interface {
     device_index       = 0
-    subnet_id          = aws_subnet.public[count.index].id
+    subnet_id          = aws_subnet.public.id
     security_groups    = [aws_security_group.k8s_node_sg.id]
     network_interface_id = aws_network_interface.k8s_node_eni[count.index].id
   }
@@ -53,16 +52,16 @@ resource "aws_instance" "k8s_master" {
   associate_public_ip_address = true
   instance_type = "t3.medium"
   key_name= "nakira974-ssh"
-  subnet_id     = aws_subnet.public[0].id
+  subnet_id     = aws_subnet.public.id
   tags = {
     Name = "k8s-master"
   }
 
   network_interface {
     device_index       = 0
-    subnet_id          = aws_subnet.public[0].id
+    subnet_id          = aws_subnet.public.id
     security_groups    = [aws_security_group.k8s_node_sg.id]
-    network_interface_id = aws_network_interface.k8s_master_eni[count.index].id
+    network_interface_id = aws_network_interface.k8s_master_eni.id
   }
 
   user_data = "${data.template_file.master_data.template}"
