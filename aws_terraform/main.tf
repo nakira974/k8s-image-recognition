@@ -3,6 +3,13 @@ provider "aws" {
   profile = "nakira974"
 }
 
+resource "aws_vpc" "k8s_vpc" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = "k8s-vpc"
+  }
+}
 data "template_file" "master_data" {
   template = "${file("master_data.sh")}"
 }
@@ -40,11 +47,7 @@ resource "aws_instance" "k8s_node" {
   user_data = "${data.template_file.node_data.template}"
 }
 
-resource "aws_network_interface_attachment" "k8s_master_eni" {
-  instance_id          = aws_instance.k8s_master.id
-  device_index         = 1
-  network_interface_id = aws_network_interface.k8s_master_eni.id
-}
+
 
 resource "aws_instance" "k8s_master" {
   ami           = "ami-064087b8d355e9051"
@@ -225,13 +228,6 @@ resource "aws_security_group" "k8s_lb_sg" {
   }
 }
 
-resource "aws_vpc" "k8s_vpc" {
-  cidr_block = "10.0.0.0/16"
-
-  tags = {
-    Name = "k8s-vpc"
-  }
-}
 
 
 resource "aws_internet_gateway" "k8s_igw" {
@@ -264,6 +260,11 @@ resource "aws_network_interface_attachment" "k8s_node_eni" {
   network_interface_id = aws_network_interface.k8s_node_eni[each.key].id
 }
 
+resource "aws_network_interface_attachment" "k8s_master_eni" {
+  instance_id          = aws_instance.k8s_master.id
+  device_index         = 1
+  network_interface_id = aws_network_interface.k8s_master_eni.id
+}
 
 resource "aws_lb_target_group" "k8s_tg" {
   name_prefix = "k8s-tg"
