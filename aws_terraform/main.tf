@@ -47,7 +47,7 @@ resource "aws_instance" "k8s_node" {
 
   subnet_id     = aws_subnet.public[count.index].id  # Specify the same subnet as the associated ENI
   availability_zone = data.aws_availability_zones.available.names[count.index]  # Specify the same availability zone as the associated ENI
-  key_name= "nakira974-ssh"
+  #key_name= "nakira974-ssh"
 
   tags = {
     Name = "k8s-node-${count.index}"
@@ -65,7 +65,7 @@ resource "aws_instance" "k8s_master" {
 
   subnet_id = aws_subnet.public[0].id
   availability_zone = data.aws_availability_zones.available.names[0]  # Specify the same availability zone as the associated ENI
-  key_name= "nakira974-ssh"
+  #key_name= "nakira974-ssh"
 
   tags = {
     Name = "k8s-master"
