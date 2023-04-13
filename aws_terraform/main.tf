@@ -109,7 +109,7 @@ resource "aws_network_interface" "k8s_node_eni" {
 
   private_ip = "10.0.${each.key}.100"
 
-  availability_zone = data.aws_subnet.public[each.value.id].availability_zone
+  availability = data.aws_subnet.public[each.value.id].availability_zone
 }
 
 resource "aws_network_interface" "k8s_master_eni" {
@@ -161,7 +161,7 @@ resource "aws_subnet" "public" {
 
   vpc_id     = aws_vpc.k8s_vpc.id
   cidr_block = "10.0.${count.index}.0/24"
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  availability = data.aws_availability_zones.available.names[count.index]
 
   tags = {
     Name = "k8s-public-subnet-${count.index + 1}"
