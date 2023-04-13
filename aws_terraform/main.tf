@@ -108,8 +108,6 @@ resource "aws_network_interface" "k8s_node_eni" {
     Name = "k8s-node-eni-${each.key + 1}"
   }
 
-  availability_zone = data.aws_availability_zones.available.names[each.key]  # Specify the same availability zone as the associated instance
-
   private_ip = "10.0.${each.key}.100"  # Make sure each ENI has a unique IP address that does not conflict with any other IP addresses in the VPC
 }
 
@@ -122,8 +120,6 @@ resource "aws_network_interface" "k8s_master_eni" {
   tags = {
     Name = "k8s-master-eni"
   }
-
-  availability_zone = data.aws_availability_zones.available.names[0]  # Specify the same availability zone as the associated instance
 
   private_ip = "10.0.0.100"  # Make sure each ENI has a unique IP address that does not conflict with any other IP addresses in the VPC
 }
