@@ -3,6 +3,8 @@ provider "aws" {
   profile = "nakira974"
 }
 
+data "aws_availability_zones" "available" {}
+
 resource "aws_vpc" "k8s_vpc" {
   cidr_block = "10.0.0.0/16"
 
@@ -146,15 +148,15 @@ resource "aws_lb" "k8s_lb" {
 }
 
 
-data "aws_availability_zones" "available" {}
 
 resource "aws_subnet" "public" {
   count = length(data.aws_availability_zones.available.names)
 
-  vpc_id     = aws_vpc.k8s_vpc.id
-  cidr_block = "10.0.${count.index}.0/24"
-  availability_zone = "${data.aws_availability_zones.available.names[count.index]}"
+  vpc_id            = aws_vpc.k8s_vpc.id
+  cidr_block        = "10.0.${count.index}.0/24"
+  availability_zone = data.aws_availability_zones.available.names[count.index]  # Add this line to specify the availability zone
   map_public_ip_on_launch = true
+
   tags = {
     Name = "k8s-public-subnet-${count.index + 1}"
   }
