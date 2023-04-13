@@ -86,11 +86,7 @@ resource "aws_route_table_association" "private" {
     aws_route_table.private,
   ]
 }
-data "aws_subnet" "public" {
-  for_each = toset([for idx, _ in aws_subnet.public : aws_subnet.public[idx].id])
 
-  id = each.key
-}
 
 resource "aws_network_interface" "k8s_node_eni" {
   for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
