@@ -40,7 +40,7 @@ resource "aws_nat_gateway" "nat" {
 }
 
 resource "aws_instance" "k8s_node" {
-  ami           = "ami-05712239ec0999b59"
+  ami           = "ami-064087b8d355e9051"
   instance_type = "t3.medium"
   associate_public_ip_address = true
   count         = 3
@@ -59,7 +59,7 @@ resource "aws_instance" "k8s_node" {
 
 
 resource "aws_instance" "k8s_master" {
-  ami           = "ami-05712239ec0999b59"
+  ami           = "ami-064087b8d355e9051"
   associate_public_ip_address = true
   instance_type = "t3.medium"
 
