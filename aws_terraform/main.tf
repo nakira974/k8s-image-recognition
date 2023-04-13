@@ -266,19 +266,18 @@ resource "aws_route_table" "public" {
 
 
 resource "aws_network_interface_attachment" "k8s_node_eni" {
-  for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
-  subnet_id = each.value.id
-  security_groups = [aws_security_group.k8s_node_sg.id]
+  for_each = { for idx, instance in aws_instance.k8s_node : idx => instance }
   instance_id         = each.value.id
   device_index        = 1
   network_interface_id = aws_network_interface.k8s_node_eni[each.key].id
+  availability_zone    = aws_subnet.public[each.key].availability_zone
 }
 
 resource "aws_network_interface_attachment" "k8s_master_eni" {
   instance_id          = aws_instance.k8s_master.id
   device_index         = 1
   network_interface_id = aws_network_interface.k8s_master_eni.id
-  subnet_id            = aws_subnet.public[0].id
+  availability_zone    = aws_subnet.public[0].availability_zone
 }
 
 resource "aws_lb_target_group" "k8s_tg" {
