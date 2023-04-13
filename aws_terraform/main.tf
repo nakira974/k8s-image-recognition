@@ -3,7 +3,9 @@ provider "aws" {
   profile = "nakira974"
 }
 
-data "aws_availability_zones" "available" {}
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 
 resource "aws_vpc" "k8s_vpc" {
   cidr_block = "10.0.0.0/16"
@@ -42,7 +44,11 @@ resource "aws_instance" "k8s_node" {
   instance_type = "t3.medium"
   associate_public_ip_address = true
   count         = 3
+
+  subnet_id     = aws_subnet.public[count.index].id  # Specify the same subnet as the associated ENI
+  availability_zone = data.aws_availability_zones.available.names[count.index]  # Specify the same availability zone as the associated ENI
   key_name= "nakira974-ssh"
+
   tags = {
     Name = "k8s-node-${count.index}"
   }
@@ -56,6 +62,9 @@ resource "aws_instance" "k8s_master" {
   ami           = "ami-064087b8d355e9051"
   associate_public_ip_address = true
   instance_type = "t3.medium"
+
+  subnet_id = aws_subnet.public[0].id
+  availability_zone = data.aws_availability_zones.available.names[0]  # Specify the same availability zone as the associated ENI
   key_name= "nakira974-ssh"
 
   tags = {
@@ -89,7 +98,6 @@ resource "aws_route_table_association" "private" {
   ]
 }
 
-
 resource "aws_network_interface" "k8s_node_eni" {
   for_each = { for idx, subnet in aws_subnet.public : idx => subnet }
 
@@ -100,12 +108,9 @@ resource "aws_network_interface" "k8s_node_eni" {
     Name = "k8s-node-eni-${each.key + 1}"
   }
 
-  # Add a reference to the private route table with a route to the NAT Gateway
-  depends_on = [
-    aws_route_table_association.private,
-  ]
+  availability_zone = data.aws_availability_zones.available.names[each.key]  # Specify the same availability zone as the associated instance
 
-  private_ip = "10.0.${each.key}.100"
+  private_ip = "10.0.${each.key}.100"  # Make sure each ENI has a unique IP address that does not conflict with any other IP addresses in the VPC
 }
 
 resource "aws_network_interface" "k8s_master_eni" {
@@ -118,12 +123,9 @@ resource "aws_network_interface" "k8s_master_eni" {
     Name = "k8s-master-eni"
   }
 
-  # Add a reference to the private route table with a route to the NAT Gateway
-  depends_on = [
-    aws_route_table_association.private,
-  ]
+  availability_zone = data.aws_availability_zones.available.names[0]  # Specify the same availability zone as the associated instance
 
-  private_ip = "10.0.0.100"
+  private_ip = "10.0.0.100"  # Make sure each ENI has a unique IP address that does not conflict with any other IP addresses in the VPC
 }
 
 
