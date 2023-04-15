@@ -1,7 +1,10 @@
+mod models;
+
+use crate::models::models::ApplicationImage;
 use std::collections::HashMap;
 use actix_web::{get, patch, post, web, App, Error, HttpResponse, HttpServer, HttpResponseBuilder};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+
 use actix_web::HttpRequest;
 
 use actix_web::{dev::ServiceRequest, middleware::Logger};
@@ -59,14 +62,10 @@ fn init_logging() {
     builder.init();
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ApplicationPhoto {
-    // fields for application photo
-}
 
 #[post("/nakira974/model/descrivizio-001/process")]
 async fn descrivizio_analyze(
-    app_photo: web::Json<ApplicationPhoto>,
+    app_photo: web::Json<ApplicationImage>,
     client: web::Data<Client>,
 ) -> Result<HttpResponse, Error> {
     let uri = format!("http://{}{}", "localhost:7777", "/model/descrivizio-001");
