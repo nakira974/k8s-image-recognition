@@ -174,6 +174,7 @@ async fn main() -> std::io::Result<()> {
         let client = Client::new();
 
         App::new()
+            .data(client)
             .wrap(Logger::new("%a %{User-Agent}i %r %s %b \"%{Referer}i\" \"%{User-Agent}i\"\" %T"))
             .service(descrivizio_analyze)
             .service(descrivizio_analyze_from_header)
