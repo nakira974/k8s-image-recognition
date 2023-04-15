@@ -4,11 +4,11 @@ services:
   descrivizio001:
     build: ./descrivizio001
     ports:
-      - ":7777"
+      - "7777:7777"
 
   descrivizio001-api:
     build: ./descrivizio001-api
     ports:
-      - "8085:8085"
+      - "49777:8085"
     depends_on:
       - descrivizio001
