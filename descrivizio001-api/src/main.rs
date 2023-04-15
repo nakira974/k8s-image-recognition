@@ -15,17 +15,28 @@ async fn descrivizio_analyze(
 ) -> Result<HttpResponse, Error> {
     let uri = format!("http://{}{}", "localhost:8000", "/model/descrivizio-001");
 
-    let response = client
+    let response = match client
         .post(&uri)
         .header("Content-Type", "application/json")
         .json(&app_photo)
         .send()
-        .await?;
+        .await {
+        Ok(res) => res,
+        Err(e) => {
+            let error_message = format!("Reqwest error: {}", e.to_string());
+            let error = actix_web::error::ErrorBadRequest(error_message);
+            return Err(error.into())
+        }
+    };
 
-    let body = response.bytes().await?;
+    let body = response
+        .bytes()
+        .await
+        .map_err(|err| actix_web::error::ErrorBadRequest(err))?;
     let mut result_builder = HttpResponse::build(response.status());
+
     for (name, value) in response.headers() {
-        result_builder.header(name, value.to_str()?);
+        result_builder.header(name, value.to_str().unwrap_or_default());
     }
 
     Ok(result_builder.body(body))
@@ -40,23 +51,34 @@ async fn descrivizio_analyze_from_header(
     let image_url = req
         .headers()
         .get("Image-Url")
-        .ok_or_else(|| HttpResponse::BadRequest().finish())?
+        .ok_or_else(|| actix_web::error::ErrorBadRequest("Image-Url header is missing"))?
         .to_str()
-        .map_err(|_| HttpResponse::BadRequest().finish())?;
+        .map_err(|_| actix_web::error::ErrorBadRequest("Invalid header value"))?;
 
-    let image_bytes = client.get(image_url).send().await?.bytes().await?;
+    let image_bytes = client
+        .get(image_url)
+        .send()
+        .await
+        .map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?
+        .bytes()
+        .await
+        .map_err(|err| actix_web::error::ErrorBadRequest(err))?;
 
     let response = client
         .post(&uri)
         .header("Content-Type", "image/*")
         .body(image_bytes)
         .send()
-        .await?;
+        .await
+        .map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
 
-    let body = response.bytes().await?;
+    let body = response.bytes()
+        .await
+        .map_err(|err| actix_web::error::ErrorBadRequest(err))?;
+
     let mut result_builder = HttpResponse::build(response.status());
     for (name, value) in response.headers() {
-        result_builder.header(name, value.to_str()?);
+        result_builder.header(name, value.to_str().unwrap_or_default());
     }
 
     Ok(result_builder.body(body))
@@ -67,17 +89,35 @@ async fn get_user_image(
     client: web::Data<Client>,
     req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
-    let image_url = req
-        .headers()
+    let image_url = match req.headers()
         .get("Image-Url")
-        .ok_or_else(|| HttpResponse::BadRequest().finish())?
-        .to_str()
-        .map_err(|_| HttpResponse::BadRequest().finish())?;
+        .ok_or_else(|| HttpResponse::BadRequest().finish())
+    {
+        Ok(header) => header.to_str().map_err(|_| {
+            actix_web::error::ErrorBadRequest("Invalid header value")
+        })?,
+        Err(response) => {
+            let error_message = format!("Invalid header value: {:?}", response);
+            return Err(actix_web::error::ErrorBadRequest(error_message).into());
+        }
+    };
 
-    let image_bytes = client.get(image_url).send().await?.bytes().await?;
+    let response = match client.get(image_url).send().await {
+        Ok(res) => res,
+        Err(e) => return Err(actix_web::error::ErrorBadRequest(format!("Reqwest error: {}", e.to_string())).into()),
+    };
+
+    let body = match response.bytes().await {
+        Ok(bytes) => bytes,
+        Err(err) => return Err(actix_web::error::ErrorBadRequest(err).into()),
+    };
 
     let mut result_builder = HttpResponse::Ok();
-    result_builder.body(image_bytes)
+    for (name, value) in response.headers() {
+        result_builder.header(name, value.to_str().unwrap_or_default());
+    }
+
+    Ok(result_builder.body(body))
 }
 
 #[actix_web::main]
