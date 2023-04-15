@@ -1,11 +1,9 @@
 import io
 from typing import Any, Dict
-import requests
+
 from PIL import Image
 from fastapi import HTTPException, Request
 from transformers import Pix2StructForConditionalGeneration, Pix2StructProcessor
-
-from ApplicationImage import ApplicationImage
 
 
 class ImagePredictionController:

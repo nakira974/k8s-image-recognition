@@ -1,16 +1,10 @@
-from typing import Any, Dict
-import io
-from PIL import Image
-from fastapi import FastAPI, File, UploadFile, Request
-from fastapi.param_functions import Body
-from transformers import Pix2StructForConditionalGeneration, Pix2StructProcessor
-from decouple import config
-from huggingface_hub import login
-from pydantic import BaseModel
-from ImagePredictionController import ImagePredictionController
-from ApplicationImage import ApplicationImage
 import uvicorn
-import base64
+from decouple import config
+from fastapi import FastAPI, Request
+from huggingface_hub import login
+from transformers import Pix2StructForConditionalGeneration, Pix2StructProcessor
+
+from ImagePredictionController import ImagePredictionController
 
 app = FastAPI()
 API_KEY = config('HUGGING_FACE_TOKEN')
@@ -26,4 +20,3 @@ async def predict_image(request: Request):
 
 
 uvicorn.run(app, host="0.0.0.0", port=7777, log_config=f"./log.ini")
-

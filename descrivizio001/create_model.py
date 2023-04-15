@@ -1,16 +1,14 @@
-import pandas as pd
 import glob
-from PIL import Image
-from google.auth.transport import requests
 
-from tensorflow.lite.python.conversion_metadata_schema_py_generated import np
-
+import pandas as pd
 import tensorflow as tf
-from keras.applications.inception_v3 import preprocess_input
-from keras import Model
-from keras.layers import Input, Flatten, Dense, Dropout, LSTM, RepeatVector, TimeDistributed
+from PIL import Image
 from huggingface_hub import login
-from transformers import AutoTokenizer, AutoModel, AutoConfig
+from keras import Model
+from keras.applications.inception_v3 import preprocess_input
+from keras.layers import Input, Flatten, Dense, Dropout, LSTM
+from tensorflow.lite.python.conversion_metadata_schema_py_generated import np
+from transformers import AutoTokenizer
 
 
 def create_text_generation_model():
@@ -110,7 +108,8 @@ def prepare_data_for_text_generation(embedding_matrix, dataframe):
 
     # Tokenize the textual descriptions
     google_bert_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-    sequences = google_bert_tokenizer(descriptions, padding='max_length', truncation=True, max_length=64, return_tensors='tf')
+    sequences = google_bert_tokenizer(descriptions, padding='max_length', truncation=True, max_length=64,
+                                      return_tensors='tf')
 
     # Create input and output sequences for training
     encoder_input_matrix = embedding_matrix
