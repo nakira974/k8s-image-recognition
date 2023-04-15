@@ -23,7 +23,7 @@ async fn main() -> std::io::Result<()> {
             .service(descrivizio_analyze_from_header)
             .service(get_user_image)
     })
-        .bind(("127.0.0.1", 8085))
+        .bind(("0.0.0.0", 8085))
         .expect("Unable to bind to port 8085")
         .run()
         .await
