@@ -1,7 +1,63 @@
+use std::collections::HashMap;
 use actix_web::{get, patch, post, web, App, Error, HttpResponse, HttpServer, HttpResponseBuilder};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use actix_web::HttpRequest;
+
+use actix_web::{dev::ServiceRequest, middleware::Logger};
+use env_logger::fmt::{Formatter, Color};
+use log::{info, LevelFilter};
+use std::io::Write;
+use std::time::{Duration, Instant};
+use actix_web::web::BufMut;
+
+
+fn format_log_message(
+    formatter: &mut env_logger::fmt::Formatter,
+    info: &ServiceRequest,
+    start_time: &Instant,
+) -> Result<(), std::io::Error> {
+    let duration = start_time.elapsed().as_micros();
+
+    let mut headers_map = HashMap::new();
+    for (name, value) in info.headers() {
+        headers_map.insert(name.as_str().to_owned(), value.to_str().unwrap_or_default().to_owned());
+    }
+
+    let uri_str = info.uri().to_string(); // Convert Uri to string
+    let log_message = serde_json::json!({
+        "request": {
+            "method": info.method().as_str(),
+            "uri": uri_str, // Use string version of Uri
+            "headers": headers_map,
+            "content_type": info.headers().get("Content-Type").map(|value| value.to_str().unwrap_or_default().to_owned()),
+        },
+        "response": {
+            "http_version": format!("{:?}", info.version()),
+            "headers": headers_map,
+            // Response body is not logged in the example
+        },
+        "duration": duration,
+     });
+
+    writeln!(formatter, "{}", log_message)?;
+    Ok(())
+}
+
+fn init_logging() {
+    let mut builder = env_logger::Builder::new();
+    builder.filter(None, LevelFilter::Info);
+    builder.format(|buf, record| {
+        writeln!(
+            buf,
+            "{} [{}] - {}",
+            chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ"),
+            record.level(),
+            record.args()
+        )
+    }).filter(None, LevelFilter::Info);
+    builder.init();
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApplicationPhoto {
@@ -113,16 +169,19 @@ async fn get_user_image(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    init_logging();
     HttpServer::new(|| {
         let client = Client::new();
 
         App::new()
-            .data(client)
+            .wrap(Logger::new("%a %{User-Agent}i %r %s %b \"%{Referer}i\" \"%{User-Agent}i\"\" %T"))
             .service(descrivizio_analyze)
             .service(descrivizio_analyze_from_header)
             .service(get_user_image)
+
     })
-        .bind(("127.0.0.1", 8085))?
+        .bind(("127.0.0.1", 8085))
+        .expect("Unable to bind to port 8085")
         .run()
         .await
 }
