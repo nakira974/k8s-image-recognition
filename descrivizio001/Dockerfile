@@ -1,15 +1,21 @@
-FROM python:3.9.9
 
+# Base image
+FROM python:3.9-slim-buster
+
+# Set working directory
 WORKDIR /app
 
+# Copy over the necessary files
 COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r ./requirements.txt
+COPY ImagePredictionController.py .
+COPY ApplicationImage.py .
+COPY main.py .
+COPY log.ini .
 
-COPY . .
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-EXPOSE 80
+# Expose port 7777 for the application to run on
+EXPOSE 7777
 
-CMD ["uvicorn", "main:app", "--reload", "--host=0.0.0.0", "--port=80"]
-
-#docker build -t descrivizio001
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7777", "--log-config=log.ini"]
