@@ -1,20 +1,17 @@
-
-
-
 pub mod model_processing {
-    use crate::models::model_processing::ApplicationImage;
     use std::collections::HashMap;
-    use actix_web::{get, patch, post, web, App, Error, HttpResponse, HttpServer, HttpResponseBuilder};
-    use reqwest::Client;
-
-    use actix_web::HttpRequest;
-
-    use actix_web::{dev::ServiceRequest, middleware::Logger};
-    use env_logger::fmt::{Formatter, Color};
-    use log::{info, LevelFilter};
     use std::io::Write;
     use std::time::{Duration, Instant};
+
+    use actix_web::{App, Error, get, HttpResponse, HttpResponseBuilder, HttpServer, patch, post, web};
+    use actix_web::{dev::ServiceRequest, middleware::Logger};
+    use actix_web::HttpRequest;
     use actix_web::web::BufMut;
+    use env_logger::fmt::{Color, Formatter};
+    use log::{info, LevelFilter};
+    use reqwest::Client;
+
+    use crate::models::model_processing::ApplicationImage;
 
     #[post("/nakira974/model/descrivizio-001/process")]
     pub async fn descrivizio_analyze(
@@ -33,7 +30,7 @@ pub mod model_processing {
             Err(e) => {
                 let error_message = format!("Reqwest error: {}", e.to_string());
                 let error = actix_web::error::ErrorBadRequest(error_message);
-                return Err(error.into())
+                return Err(error.into());
             }
         };
 
@@ -48,6 +45,7 @@ pub mod model_processing {
 
         Ok(result_builder.body(bytes))
     }
+
     #[patch("/nakira974/model/descrivizio-001/process")]
     pub async fn descrivizio_analyze_from_header(
         client: web::Data<Client>,
@@ -80,11 +78,12 @@ pub mod model_processing {
 
         // Read response body into memory as bytes
         let status = response.status();
-        let resp_body = response.bytes().await.map_err(|err|actix_web::error::ErrorBadRequest(err))?;
+        let resp_body = response.bytes().await.map_err(|err| actix_web::error::ErrorBadRequest(err))?;
         let mut http_resp_builder = HttpResponseBuilder::new(status);
 
         Ok(http_resp_builder.body(resp_body))
     }
+
     #[get("/nakira974/model/image/download")]
     pub async fn get_user_image(
         client: web::Data<Client>,
@@ -118,5 +117,4 @@ pub mod model_processing {
 
         Ok(result_builder.body(body))
     }
-
 }

@@ -1,10 +1,11 @@
-pub mod logging_service{
+pub mod logging_service {
     use std::collections::HashMap;
     use std::io::Write;
+
     use actix_rt::time::Instant;
-    use log::LevelFilter;
     use actix_web::{dev::ServiceRequest, middleware::Logger};
-    use env_logger::fmt::{Formatter, Color};
+    use env_logger::fmt::{Color, Formatter};
+    use log::LevelFilter;
 
     fn format_log_message(
         formatter: &mut env_logger::fmt::Formatter,

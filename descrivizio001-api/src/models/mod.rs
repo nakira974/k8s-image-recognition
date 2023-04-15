@@ -1,5 +1,4 @@
-
-pub  mod model_processing {
+pub mod model_processing {
     use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Serialize, Deserialize)]
