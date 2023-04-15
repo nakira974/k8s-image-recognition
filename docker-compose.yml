@@ -9,6 +9,6 @@ services:
   descrivizio001-api:
     build: ./descrivizio001-api
     ports:
-      - "49777:8085"
+      - "8085:8085"
     depends_on:
       - descrivizio001

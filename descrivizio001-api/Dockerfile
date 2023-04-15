@@ -1,20 +1,42 @@
-FROM rust:1.68.2 as builder
+#################
+## build stage ##
+#################
+FROM rust:1.68.2-slim-bullseye AS builder
+WORKDIR /code
 
-WORKDIR /app
+# Install openssl and pkg-config dependencies
+RUN apt-get update && \
+    apt-get -y install libssl-dev pkg-config && \
+    rm -rf /var/lib/apt/lists/*
 
-# Copy source code to container
-COPY . .
+# Download crates-io index and fetch dependency code.
+# This step avoids needing to spend time on every build downloading the index
+# which can take a long time within the docker context. Docker will cache it.
+RUN USER=root cargo init
+COPY Cargo.toml Cargo.toml
+RUN cargo fetch
 
-# Build the application
+# copy app files
+COPY src src
+
+# compile app
 RUN cargo build --release
 
-# Start a new stage and copy over the binary
-FROM debian:stretch-slim
+###############
+## run stage ##
+###############
+FROM debian:bullseye-slim
+WORKDIR /app
 
-COPY --from=builder /app/target/release/descrivizio001-api /usr/local/bin/descrivizio001-api
+# Copy SSL libraries from builder stage image.
+COPY --from=builder /usr/lib/x86_64-linux-gnu/libssl.so* /usr/lib/
+COPY --from=builder /usr/lib/x86_64-linux-gnu/libcrypto.so* /usr/lib/
 
-# Expose port 8085
+# copy server binary from build stage
+COPY --from=builder /code/target/release/descrivizio001-api descrivizio001-api
+
+# indicate what port the server is running on
 EXPOSE 8085
 
-# Start the service
-CMD ["descrivizio001-api"]
+# run server
+CMD [ "/app/descrivizio001-api" ]
