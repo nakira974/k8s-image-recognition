@@ -1,4 +1,4 @@
-use actix_web::{get, patch, post, web, App, Error, HttpResponse, HttpServer};
+use actix_web::{get, patch, post, web, App, Error, HttpResponse, HttpServer, HttpResponseBuilder};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use actix_web::HttpRequest;
@@ -13,7 +13,7 @@ async fn descrivizio_analyze(
     app_photo: web::Json<ApplicationPhoto>,
     client: web::Data<Client>,
 ) -> Result<HttpResponse, Error> {
-    let uri = format!("http://{}{}", "localhost:8000", "/model/descrivizio-001");
+    let uri = format!("http://{}{}", "localhost:7777", "/model/descrivizio-001");
 
     let response = match client
         .post(&uri)
@@ -29,61 +29,54 @@ async fn descrivizio_analyze(
         }
     };
 
-    let body = response
-        .bytes()
-        .await
-        .map_err(|err| actix_web::error::ErrorBadRequest(err))?;
-    let mut result_builder = HttpResponse::build(response.status());
+    let status_code = response.status();
+    let headers = response.headers().clone();
+    let bytes = response.bytes().await.map_err(|err| actix_web::error::ErrorBadRequest(err))?;
 
-    for (name, value) in response.headers() {
-        result_builder.header(name, value.to_str().unwrap_or_default());
+    let mut result_builder = HttpResponse::build(status_code);
+    for (name, value) in headers {
+        result_builder.header(name.unwrap(), value.to_str().unwrap_or_default());
     }
 
-    Ok(result_builder.body(body))
+    Ok(result_builder.body(bytes))
 }
-
 #[patch("/nakira974/model/descrivizio-001/process")]
 async fn descrivizio_analyze_from_header(
     client: web::Data<Client>,
     req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
-    let uri = format!("http://{}{}", "localhost:8000", "/model/descrivizio-001");
-    let image_url = req
-        .headers()
+    let uri = format!("http://{}{}", "localhost:7777", "/model/descrivizio-001");
+
+    // Extract image_url from request headers
+    let image_url = match req.headers()
         .get("Image-Url")
-        .ok_or_else(|| actix_web::error::ErrorBadRequest("Image-Url header is missing"))?
-        .to_str()
-        .map_err(|_| actix_web::error::ErrorBadRequest("Invalid header value"))?;
+        .map(|value| value.to_str().ok())
+        .flatten() {
+        Some(url) => url.to_owned(),
+        None => return Err(actix_web::error::ErrorBadRequest("Invalid header value").into()),
+    };
 
-    let image_bytes = client
-        .get(image_url)
-        .send()
-        .await
-        .map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?
-        .bytes()
-        .await
-        .map_err(|err| actix_web::error::ErrorBadRequest(err))?;
+    // Get image bytes
+    let mut image_bytes_response = client.get(&image_url).send().await.map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
+    let mut image_bytes = Vec::new();
+    while let Some(chunk) = image_bytes_response.chunk().await.map_err(|err| actix_web::error::ErrorInternalServerError(err))? {
+        image_bytes.extend_from_slice(&chunk);
+    }
 
-    let response = client
-        .post(&uri)
+    // Send POST request to remote server with binary payload
+    let response = client.post(&uri)
         .header("Content-Type", "image/*")
         .body(image_bytes)
         .send()
-        .await
-        .map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
+        .await.map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
 
-    let body = response.bytes()
-        .await
-        .map_err(|err| actix_web::error::ErrorBadRequest(err))?;
+    // Read response body into memory as bytes
+    let status = response.status();
+    let resp_body = response.bytes().await.map_err(|err|actix_web::error::ErrorBadRequest(err))?;
+    let mut http_resp_builder = HttpResponseBuilder::new(status);
 
-    let mut result_builder = HttpResponse::build(response.status());
-    for (name, value) in response.headers() {
-        result_builder.header(name, value.to_str().unwrap_or_default());
-    }
-
-    Ok(result_builder.body(body))
+    Ok(http_resp_builder.body(resp_body))
 }
-
 #[get("/nakira974/model/image/download")]
 async fn get_user_image(
     client: web::Data<Client>,
@@ -102,10 +95,8 @@ async fn get_user_image(
         }
     };
 
-    let response = match client.get(image_url).send().await {
-        Ok(res) => res,
-        Err(e) => return Err(actix_web::error::ErrorBadRequest(format!("Reqwest error: {}", e.to_string())).into()),
-    };
+    let response = client.get(image_url).send().await.map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
+    let headers = response.headers().clone();
 
     let body = match response.bytes().await {
         Ok(bytes) => bytes,
@@ -113,8 +104,8 @@ async fn get_user_image(
     };
 
     let mut result_builder = HttpResponse::Ok();
-    for (name, value) in response.headers() {
-        result_builder.header(name, value.to_str().unwrap_or_default());
+    for (name, value) in headers.iter() {
+        result_builder.header(name.clone(), value.to_str().unwrap_or_default());
     }
 
     Ok(result_builder.body(body))
@@ -131,7 +122,7 @@ async fn main() -> std::io::Result<()> {
             .service(descrivizio_analyze_from_header)
             .service(get_user_image)
     })
-        .bind(("127.0.0.1", 7777))?
+        .bind(("127.0.0.1", 8085))?
         .run()
         .await
 }
