@@ -25,7 +25,7 @@ pub mod model_processing {
         app_photo: web::Json<ApplicationImage>,
         client: web::Data<Client>,
     ) -> Result<HttpResponse, Error> {
-        let uri = format!("http://{}{}", "localhost:7777", "/model/descrivizio-001");
+        let uri = format!("http://{}{}", "descrivizio001:7777", "/model/descrivizio-001");
 
         let response = match client
             .post(&uri)
@@ -58,7 +58,7 @@ pub mod model_processing {
         client: web::Data<Client>,
         req: HttpRequest,
     ) -> Result<HttpResponse, Error> {
-        let uri = format!("http://{}{}", "localhost:7777", "/model/descrivizio-001");
+        let uri = format!("http://{}{}", "descrivizio001:7777", "/model/descrivizio-001");
 
         // Extract image_url from request headers
         let image_url = match req.headers()
@@ -109,36 +109,19 @@ pub mod model_processing {
             }
         };
 
-        let response = client.get(image_url)
-            .send()
-            .await
-            .map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
+        let response = client.get(image_url).send().await.map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
+        let headers = response.headers().clone();
 
-        let bytes = response
-            .bytes()
-            .await
-            .map_err(|err| actix_web::error::ErrorBadRequest(err))?;
+        let body = match response.bytes().await {
+            Ok(bytes) => bytes,
+            Err(err) => return Err(actix_web::error::ErrorBadRequest(err).into()),
+        };
 
-        let mut image_response = client.get(image_url)
-            .send()
-            .await
-            .map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
-        let mut image_bytes = Vec::new();
-        while let Some(chunk) = image_response.chunk().await.map_err(|err| actix_web::error::ErrorInternalServerError(err))? {
-            image_bytes.extend_from_slice(&chunk);
-        }
-        let headers = image_response.headers().clone();
-        let mut builder = HttpResponse::Ok().body(image_bytes);
-        let mut new_headers = HeaderMap::new();
+        let mut result_builder = HttpResponse::Ok();
         for (name, value) in headers.iter() {
-            new_headers.insert(name.clone(), value.clone());
+            result_builder.header(name.clone(), value.to_str().unwrap_or_default());
         }
-        for (name, value) in new_headers.iter() {
-            builder.headers_mut().insert(name.clone(), value.clone());
-        }
-        let header_name = HeaderName::from_static("X-Original-Url");
-        new_headers.append(header_name, image_url.parse().unwrap());
 
-        Ok(builder.into())
+        Ok(result_builder.body(body))
     }
 }

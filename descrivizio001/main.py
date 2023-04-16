@@ -17,4 +17,4 @@ controller = ImagePredictionController(google_model, processor)
 async def predict_image(request: Request):
     return await controller.predict(request)
 
-uvicorn.run(app, host="0.0.0.0", port=7777, log_config=f"./log.ini")
+#uvicorn.run(app, host="0.0.0.0", port=7777, log_config=f"./log.ini")
