@@ -1,2 +1,2 @@
-# wickr-botgpt
-A simple Wickr bot using embedding that suggests  an answer
+# k8s-image-recognition
+A simple Image recognition model exposed on uvicorn, exposed by an Actix reverse proxy
