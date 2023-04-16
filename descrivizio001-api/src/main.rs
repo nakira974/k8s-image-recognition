@@ -1,6 +1,8 @@
 use actix_web::{App, HttpServer};
 use actix_web::middleware::Logger;
 use reqwest::Client;
+use std::sync::Arc;
+use tokio::task::spawn_blocking;
 
 use crate::controllers::model_processing::{descrivizio_analyze, descrivizio_analyze_from_header, get_user_image};
 use crate::models::model_processing::ApplicationImage;
@@ -13,9 +15,9 @@ mod services;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     init_logging();
-    HttpServer::new(|| {
-        let client = Client::new();
-
+    let client = Arc::new(Client::new());
+    HttpServer::new(move || {
+        let client = client.clone();
         App::new()
             .data(client)
             .wrap(Logger::new("%a %{User-Agent}i %r %s %b \"%{Referer}i\" \"%{User-Agent}i\"\" %T"))

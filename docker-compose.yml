@@ -2,19 +2,13 @@ version: "3"
 
 networks:
   descrivizio-network:
-  descrivizio-api-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
-          gateway: 172.28.5.254
+    external: false
 
 services:
   descrivizio001:
     build: ./descrivizio001
     networks:
       - descrivizio-network
-      - descrivizio-api-network
 
   descrivizio001-api:
     build: ./descrivizio001-api
@@ -22,6 +16,4 @@ services:
       - "8085:8085"
     depends_on:
       - descrivizio001
-    networks:
-      - descrivizio-api-network
 

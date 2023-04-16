@@ -1,16 +1,23 @@
 pub mod model_processing {
+
     use std::collections::HashMap;
     use std::io::Write;
-    use std::time::{Duration, Instant};
 
+    use std::time::{Duration, Instant};
+    use tokio::task::spawn_blocking;
+    use actix_web::http::header::HeaderName;
     use actix_web::{App, Error, get, HttpResponse, HttpResponseBuilder, HttpServer, patch, post, web};
     use actix_web::{dev::ServiceRequest, middleware::Logger};
     use actix_web::HttpRequest;
     use actix_web::web::BufMut;
+    use actix_web::web::Bytes;
+    use reqwest::Body;
+    use reqwest::Client;
+    use actix_web::http::header::HeaderMap;
     use env_logger::fmt::{Color, Formatter};
     use log::{info, LevelFilter};
-    use reqwest::Client;
 
+    use futures_util::future::FutureExt;
     use crate::models::model_processing::ApplicationImage;
 
     #[post("/nakira974/model/descrivizio-001/process")]
@@ -102,19 +109,36 @@ pub mod model_processing {
             }
         };
 
-        let response = client.get(image_url).send().await.map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
-        let headers = response.headers().clone();
+        let response = client.get(image_url)
+            .send()
+            .await
+            .map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
 
-        let body = match response.bytes().await {
-            Ok(bytes) => bytes,
-            Err(err) => return Err(actix_web::error::ErrorBadRequest(err).into()),
-        };
+        let bytes = response
+            .bytes()
+            .await
+            .map_err(|err| actix_web::error::ErrorBadRequest(err))?;
 
-        let mut result_builder = HttpResponse::Ok();
-        for (name, value) in headers.iter() {
-            result_builder.header(name.clone(), value.to_str().unwrap_or_default());
+        let mut image_response = client.get(image_url)
+            .send()
+            .await
+            .map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
+        let mut image_bytes = Vec::new();
+        while let Some(chunk) = image_response.chunk().await.map_err(|err| actix_web::error::ErrorInternalServerError(err))? {
+            image_bytes.extend_from_slice(&chunk);
         }
+        let headers = image_response.headers().clone();
+        let mut builder = HttpResponse::Ok().body(image_bytes);
+        let mut new_headers = HeaderMap::new();
+        for (name, value) in headers.iter() {
+            new_headers.insert(name.clone(), value.clone());
+        }
+        for (name, value) in new_headers.iter() {
+            builder.headers_mut().insert(name.clone(), value.clone());
+        }
+        let header_name = HeaderName::from_static("X-Original-Url");
+        new_headers.append(header_name, image_url.parse().unwrap());
 
-        Ok(result_builder.body(body))
+        Ok(builder.into())
     }
 }

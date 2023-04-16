@@ -1,6 +1,6 @@
 
 # Base image
-FROM python:3.9-slim-buster
+FROM python:3.9-bullseye
 
 # Set working directory
 WORKDIR /app
@@ -11,9 +11,10 @@ COPY ImagePredictionController.py .
 COPY ApplicationImage.py .
 COPY main.py .
 COPY log.ini .
+COPY .env .
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Expose port 7777 for the application to run on
 EXPOSE 7777
