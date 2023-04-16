@@ -1,16 +1,23 @@
 pub mod model_processing {
+
     use std::collections::HashMap;
     use std::io::Write;
-    use std::time::{Duration, Instant};
 
+    use std::time::{Duration, Instant};
+    use tokio::task::spawn_blocking;
+    use actix_web::http::header::HeaderName;
     use actix_web::{App, Error, get, HttpResponse, HttpResponseBuilder, HttpServer, patch, post, web};
     use actix_web::{dev::ServiceRequest, middleware::Logger};
     use actix_web::HttpRequest;
     use actix_web::web::BufMut;
+    use actix_web::web::Bytes;
+    use reqwest::Body;
+    use reqwest::Client;
+    use actix_web::http::header::HeaderMap;
     use env_logger::fmt::{Color, Formatter};
     use log::{info, LevelFilter};
-    use reqwest::Client;
 
+    use futures_util::future::FutureExt;
     use crate::models::model_processing::ApplicationImage;
 
     #[post("/nakira974/model/descrivizio-001/process")]
@@ -18,7 +25,7 @@ pub mod model_processing {
         app_photo: web::Json<ApplicationImage>,
         client: web::Data<Client>,
     ) -> Result<HttpResponse, Error> {
-        let uri = format!("http://{}{}", "localhost:7777", "/model/descrivizio-001");
+        let uri = format!("http://{}{}", "descrivizio001:7777", "/model/descrivizio-001");
 
         let response = match client
             .post(&uri)
@@ -51,7 +58,7 @@ pub mod model_processing {
         client: web::Data<Client>,
         req: HttpRequest,
     ) -> Result<HttpResponse, Error> {
-        let uri = format!("http://{}{}", "localhost:7777", "/model/descrivizio-001");
+        let uri = format!("http://{}{}", "descrivizio001:7777", "/model/descrivizio-001");
 
         // Extract image_url from request headers
         let image_url = match req.headers()

@@ -1,6 +1,7 @@
 use actix_web::{App, HttpServer};
 use actix_web::middleware::Logger;
-use reqwest::Client;
+use reqwest::{Client, ClientBuilder};
+use std::time::Duration;
 
 use crate::controllers::model_processing::{descrivizio_analyze, descrivizio_analyze_from_header, get_user_image};
 use crate::models::model_processing::ApplicationImage;
@@ -14,7 +15,12 @@ mod services;
 async fn main() -> std::io::Result<()> {
     init_logging();
     HttpServer::new(|| {
-        let client = Client::new();
+        let client = ClientBuilder::new()
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(30))
+            .danger_accept_invalid_certs(true)
+            .build()
+            .unwrap();
 
         App::new()
             .data(client)
@@ -23,7 +29,7 @@ async fn main() -> std::io::Result<()> {
             .service(descrivizio_analyze_from_header)
             .service(get_user_image)
     })
-        .bind(("127.0.0.1", 8085))
+        .bind(("0.0.0.0", 8085))
         .expect("Unable to bind to port 8085")
         .run()
         .await

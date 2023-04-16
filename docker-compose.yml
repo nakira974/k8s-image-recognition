@@ -1,14 +1,27 @@
-version: '3'
+version: "3"
+
+networks:
+  descrivizio-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.101.64/29
+          gateway: 192.168.101.70
 
 services:
   descrivizio001:
     build: ./descrivizio001
     ports:
       - "7777:7777"
+    networks:
+      - descrivizio-network
+    hostname: descrivizio001
 
   descrivizio001-api:
     build: ./descrivizio001-api
     ports:
-      - "49777:8085"
+      - "8085:8085"
     depends_on:
       - descrivizio001
+    networks:
+      - descrivizio-network
