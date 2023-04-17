@@ -2,6 +2,7 @@ apiVersion: kompose.k8s.io/v1alpha1
 kind: Compose
 metadata:
   name: descrivizio001
+  namespace: default
 spec:
   version: '2'
   networks:
