@@ -5,8 +5,6 @@ services:
     image : nakiradu77/k8s-image-recognition-descrivizio001:latest
     ports:
       - "7777:7777"
-    networks:
-      - descrivizio-network
     hostname: descrivizio001
 
   descrivizio001-api:
@@ -15,5 +13,3 @@ services:
       - "8085:8085"
     depends_on:
       - descrivizio001
-    networks:
-      - descrivizio-network
