@@ -7,7 +7,15 @@ on:
     branches: [ "master" ]
 
 jobs:
-
+  login:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
   build:
 
     runs-on: ubuntu-latest
@@ -15,4 +23,4 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: echo "HUGGING_FACE_TOKEN=${{ secrets.HUGGING_FACE_TOKEN }}" > ./descrivizio001/.env && docker-compose build
+      run: echo "HUGGING_FACE_TOKEN=${{ secrets.HUGGING_FACE_TOKEN }}" > ./descrivizio001/.env && prod.docker-compose build
