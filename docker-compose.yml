@@ -1,31 +1,19 @@
-apiVersion: kompose.k8s.io/v1alpha1
-kind: Compose
-metadata:
-  name: descrivizio001
-  namespace: default
-spec:
-  version: '2'
-  networks:
-    descrivizio-network:
-      driver: bridge
-      ipam:
-        config:
-          - subnet: 192.168.102.64/29
-            gateway: 192.168.101.70
-  services:
-    descrivizio001:
-      build: ./descrivizio001
-      ports:
-        - "7777:7777"
-      networks:
-        - descrivizio-network
-      hostname: descrivizio001
+version: "3"
 
-    descrivizio001-api:
-      build: ./descrivizio001-api
-      ports:
-        - "8085:8085"
-      depends_on:
-        - descrivizio001
-      networks:
-        - descrivizio-network
+services:
+  descrivizio001:
+    image : nakiradu77/k8s-image-recognition-descrivizio001:latest
+    ports:
+      - "7777:7777"
+    networks:
+      - descrivizio-network
+    hostname: descrivizio001
+
+  descrivizio001-api:
+    image: nakiradu77/k8s-image-recognition-descrivizio001-api:latest
+    ports:
+      - "8085:8085"
+    depends_on:
+      - descrivizio001
+    networks:
+      - descrivizio-network
