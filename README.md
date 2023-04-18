@@ -1,8 +1,7 @@
 # k8s-image-recognition
 
-
-A simple Image recognition model exposed on uvicorn, exposed by an Actix reverse proxy,
-that runs in a k8s cluster hosted on aws
+This repository was made for my final project for my Engineer degree at Unilasalle Amiens, thank you to the staff of the school as well as to the teachers for these 3 years which complete my 6 years of studies in the field of software and system/network engineering.
+It concists in a simple automated k8s cluster build on AWS deploying an actix_web reverse proxy API to call an inference of google/pix2struct model that i trained for french road signs, stored in Huggingface.co 
 
 ## How to Use :
 ```shell
