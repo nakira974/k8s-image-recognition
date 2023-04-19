@@ -25,7 +25,7 @@ pub mod model_processing {
         app_photo: web::Json<ApplicationImage>,
         client: web::Data<Client>,
     ) -> Result<HttpResponse, Error> {
-        let uri = format!("http://{}{}", "descrivizio001:7777", "/model/descrivizio-001");
+        let uri = format!("http://{}{}", "descrivizio001.default.svc.cluster.local:7777", "/model/descrivizio-001");
 
         let response = match client
             .post(&uri)
@@ -58,7 +58,8 @@ pub mod model_processing {
         client: web::Data<Client>,
         req: HttpRequest,
     ) -> Result<HttpResponse, Error> {
-        let uri = format!("http://{}{}", "descrivizio001:7777", "/model/descrivizio-001");
+        //34.229.217.159:32000
+        let uri = format!("http://{}{}", "descrivizio001.default.svc.cluster.local:7777", "/model/descrivizio-001");
 
         // Extract image_url from request headers
         let image_url = match req.headers()
@@ -80,6 +81,7 @@ pub mod model_processing {
         let response = client.post(&uri)
             .header("Content-Type", "image/*")
             .body(image_bytes)
+            .timeout(Duration::from_secs(300)) // 5 minute timeout
             .send()
             .await.map_err(|err| actix_web::error::ErrorBadRequest(err.to_string()))?;
 

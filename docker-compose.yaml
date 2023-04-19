@@ -13,3 +13,9 @@ services:
       - "8085:8085"
     depends_on:
       - descrivizio001
+
+  descrivizio001-web:
+    image: nakiradu77/k8s-image-recognition-descrivizio001-web:dev
+    ports:
+      - "5248:5248"
+      - "7001:7001"
