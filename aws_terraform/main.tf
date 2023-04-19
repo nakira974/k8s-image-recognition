@@ -40,6 +40,7 @@ resource "aws_nat_gateway" "nat" {
 }
 
 resource "aws_instance" "k8s_node" {
+  vpc_security_group_ids = [aws_vpc.k8s_vpc.default_security_group_id]
   ami           = "ami-064087b8d355e9051"
   instance_type = "t3.medium"
   associate_public_ip_address = true
@@ -63,7 +64,8 @@ resource "aws_instance" "k8s_master" {
   associate_public_ip_address = true
   instance_type = "t3.medium"
 
-  subnet_id = aws_subnet.public[0].id
+  vpc_security_group_ids = [aws_vpc.k8s_vpc.default_security_group_id]
+subnet_id = aws_subnet.public[0].id
   availability_zone = data.aws_availability_zones.available.names[0]  # Specify the same availability zone as the associated ENI
   #key_name= "nakira974-ssh"
 

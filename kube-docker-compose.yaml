@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+  descrivizio001:
+    image : nakiradu77/k8s-image-recognition-descrivizio001:latest
+    ports:
+      - "7777:7777"
+    hostname: descrivizio001
+
+  descrivizio001-api:
+    image: nakiradu77/k8s-image-recognition-descrivizio001-api:latest
+    ports:
+      - "8085:8085"
+    depends_on:
+      - descrivizio001
