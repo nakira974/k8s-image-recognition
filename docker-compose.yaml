@@ -1,21 +1,38 @@
 version: "3"
 
+networks:
+  descrivizio-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.98.64/30
+          gateway: 192.168.98.68
+
 services:
   descrivizio001:
-    image : nakiradu77/k8s-image-recognition-descrivizio001:latest
+    build: ./descrivizio001
     ports:
       - "7777:7777"
+    networks:
+      - descrivizio-network
     hostname: descrivizio001
 
   descrivizio001-api:
-    image: nakiradu77/k8s-image-recognition-descrivizio001-api:latest
+    build: ./descrivizio001-api
     ports:
       - "8085:8085"
     depends_on:
       - descrivizio001
+    networks:
+      - descrivizio-network
 
   descrivizio001-web:
-    image: nakiradu77/k8s-image-recognition-descrivizio001-web:dev
+    build: ./descrivizio001-api
     ports:
       - "80:80"
-      - "443:443"
+    depends_on:
+      - descrivizio001
+    networks:
+      - descrivizio-network
+    environment:
+      - ASPNETCORE_URLS=http://+:80
