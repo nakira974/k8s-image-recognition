@@ -8,8 +8,11 @@ CI\CD are building docker images resulting from the main branch's content.
 
 ## How to Use :
 ```shell
-kompose convert -f .\docker-compose.yml
-kubectl --kubeconfig=<Path to your configuration> apply -f .
+kompose convert -f .\kube-docker-compose.yml
+kubectl --kubeconfig=<Path to your configuration> apply -f <desirated-deployments>
+...
+kubectl expose deployment descrivizio001-web --type="NodePort" --port 80 --name=desrivizio001-web
+kubectl expose deployment descrivizio001-api --type="NodePort" --port 8085 --name=descrivizio001-api
 kubectl get pod
 kubectl get service
 kubectl get deployment
