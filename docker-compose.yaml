@@ -25,7 +25,7 @@ services:
       - descrivizio001
     networks:
       - descrivizio-network
-    hostname: descrivizio001.api
+    hostname: api.descrivizio001
 
   descrivizio001-web:
     build: ./descrivizio001-web
@@ -35,6 +35,6 @@ services:
       - descrivizio001-api
     networks:
       - descrivizio-network
-    hostname: descrivizio001.web
+    hostname: web.descrivizio001
     environment:
       - ASPNETCORE_URLS=http://+:80
