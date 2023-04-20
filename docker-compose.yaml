@@ -25,14 +25,16 @@ services:
       - descrivizio001
     networks:
       - descrivizio-network
+    hostname: descrivizio001.api
 
   descrivizio001-web:
-    build: ./descrivizio001-api
+    build: ./descrivizio001-web
     ports:
       - "80:80"
     depends_on:
-      - descrivizio001
+      - descrivizio001-api
     networks:
       - descrivizio-network
+    hostname: descrivizio001.web
     environment:
       - ASPNETCORE_URLS=http://+:80
