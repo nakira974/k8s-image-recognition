@@ -17,6 +17,5 @@ services:
     image: nakiradu77/k8s-image-recognition-descrivizio001-web:dev
     ports:
       - "80:80"
-      - "443:443"
     environment:
       - ASPNETCORE_URLS=http://+:80
