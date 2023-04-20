@@ -1,6 +1,6 @@
 # curl --location --request PATCH 'http://localhost:32060/nakira974/model/descrivizio-001/process'
 #--header 'Image-Url: https://i1.wp.com/theglobalwizards.com/wp-content/uploads/2020/01/Stuart-Highway-Sign-Alice-Springs-Adelaide.jpg?fit=968%2C645&ssl=1'
-PATCH http://descrivizio001.lkh.coffee/nakira974/model/descrivizio-001/process
+PATCH http://localhost:30690/nakira974/model/descrivizio-001/process
 Image-Url: https://i1.wp.com/theglobalwizards.com/wp-content/uploads/2020/01/Stuart-Highway-Sign-Alice-Springs-Adelaide.jpg?fit=968%2C645&ssl=1
 
 ###
