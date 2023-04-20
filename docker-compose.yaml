@@ -17,5 +17,5 @@ services:
   descrivizio001-web:
     image: nakiradu77/k8s-image-recognition-descrivizio001-web:dev
     ports:
-      - "5248:5248"
-      - "7001:7001"
+      - "80:80"
+      - "443:443"

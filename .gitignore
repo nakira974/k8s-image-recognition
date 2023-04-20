@@ -139,3 +139,5 @@ Cargo.lock
 /.idea
 /Cargo.lock
 *.zip
+/descrivizio001-web/obj
+/descrivizio001-web/bin
