@@ -4,7 +4,7 @@ WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Development
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY ["ImageAnalyzerV1/ImageAnalyzerV1.csproj", "ImageAnalyzerV1/"]
+COPY ["descrivizio001-web/ImageAnalyzerV1.csproj", "ImageAnalyzerV1/"]
 RUN dotnet restore "ImageAnalyzerV1/ImageAnalyzerV1.csproj"
 COPY . .
 WORKDIR "/src/ImageAnalyzerV1"
