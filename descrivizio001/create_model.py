@@ -148,7 +148,7 @@ text_generation_model.compile(optimizer='adam', loss='categorical_crossentropy',
 text_generation_model.fit([decoder_input_data], [decoder_target_data], epochs=10, batch_size=32)
 output = text_generation_model.predict([encoder_input_data])
 
-login(token="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")
+login(token="")
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 decoded_output = tokenizer.decode(output[0], skip_special_tokens=True)
 print(decoded_output)
