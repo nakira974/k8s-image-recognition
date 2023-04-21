@@ -8,10 +8,10 @@ COPY ["ImageAnalyzerV1.csproj", "ImageAnalyzerV1/"]
 RUN dotnet restore "ImageAnalyzerV1/ImageAnalyzerV1.csproj"
 COPY . .
 WORKDIR "/src/ImageAnalyzerV1"
-RUN dotnet build "ImageAnalyzerV1.csproj" -c Debug -o /app/build
+RUN dotnet build "ImageAnalyzerV1/ImageAnalyzerV1.csproj" -c Debug -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "ImageAnalyzerV1.csproj" -c Debug -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ImageAnalyzerV1/ImageAnalyzerV1.csproj" -c Debug -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
