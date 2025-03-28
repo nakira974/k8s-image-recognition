@@ -1,6 +1,6 @@
 # k8s-image-recognition
 
-This repository was made for my Final engineering study project at Unilasalle Amiens France, thank you to the staff of the school as well as to the teachers for these 3 years which complete my 6 years of studies in the field of software and system/network engineering.
+This repository was made for a study project.
 
 It concists in a simple automated k8s cluster build on AWS deploying an actix_web reverse proxy API to call an inference of google/pix2struct model that i trained for french road signs, stored in Huggingface.co.
 
